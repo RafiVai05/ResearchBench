@@ -49,7 +49,7 @@ dev = [
 researchbench = "researchbench.cli:main"
 
 [tool.setuptools]
-packages = ["researchbench", "researchbench.dataset", "researchbench.evaluation", "researchbench.audit", "researchbench.advisor", "researchbench.reporting", "researchbench.utils"]
+packages = ["researchbench", "researchbench.dataset", "researchbench.evaluation", "researchbench.audit", "researchbench.advisor", "researchbench.models", "researchbench.reporting", "researchbench.utils"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
