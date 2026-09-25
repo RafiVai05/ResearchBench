@@ -399,14 +399,51 @@ def execute_cli():
             # Drift
             from researchbench.audit.drift import detect_drift
             audit_res["drift"] = detect_drift(X, config)
-            
-            # Artifact Audit
+                        # Artifact Audit
             audit_res["artifact_audit"] = {}
             if config.get("artifact_audit", {}).get("enabled", False):
                 from researchbench.audit.artifacts import audit_artifacts
                 history_mock = [{"models": model_res, "config": config}]
                 audit_res["artifact_audit"] = audit_artifacts(".", history_mock)
-
+                
+            # v0.6 Additions
+            # Compute Profile
+            from researchbench.evaluation.compute import profile_compute
+            if config.get("compute_profiling", {}).get("enabled", False):
+                processed_models = getattr(evaluate_models, "last_processed", {})
+                for m_name, model_pipe in processed_models.items():
+                    model_res[m_name]["compute"] = profile_compute(model_pipe, X)
+                    
+            # Robustness
+            from researchbench.evaluation.robustness import evaluate_robustness
+            if config.get("robustness", {}).get("enabled", False):
+                processed_models = getattr(evaluate_models, "last_processed", {})
+                for m_name, model_pipe in processed_models.items():
+                    model_res[m_name]["robustness"] = evaluate_robustness(model_pipe, X, y, task, config)
+                    
+            # Hard Examples
+            from researchbench.evaluation.typology import mine_hard_examples
+            if config.get("hard_examples", {}).get("enabled", False):
+                for m_name, m_data in model_res.items():
+                    oof_y = m_data.get("cv", {}).get("oof_y")
+                    oof_preds = m_data.get("cv", {}).get("oof_preds")
+                    oof_probs = m_data.get("cv", {}).get("oof_probs")
+                    if oof_y and oof_preds:
+                        model_res[m_name]["hard_examples"] = mine_hard_examples(oof_y, oof_preds, oof_probs, X, task)
+                        
+            # Model Agreement
+            from researchbench.evaluation.agreement import evaluate_agreement
+            if config.get("agreement", {}).get("enabled", False) and len(model_res) > 1:
+                preds_dict = {}
+                true_y = None
+                for m_name, m_data in model_res.items():
+                    oof_y = m_data.get("cv", {}).get("oof_y")
+                    oof_preds = m_data.get("cv", {}).get("oof_preds")
+                    if oof_preds:
+                        preds_dict[m_name] = oof_preds
+                        if true_y is None: true_y = oof_y
+                if true_y is not None:
+                    audit_res["agreement"] = evaluate_agreement(preds_dict, true_y, task)
             print_section("RUN CONFIGURATION RESULTS")
 
             for m, vals in model_res.items():

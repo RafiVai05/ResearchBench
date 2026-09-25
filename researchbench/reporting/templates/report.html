@@ -238,7 +238,146 @@
     </div>
     {% endif %}
 
-    <h2>Reproducibility & Limitations</h2>
+    
+
+    <!-- V0.6 Computational Profiling -->
+    <div class="card">
+        <h2>Computational Profiling & Efficiency</h2>
+        <table class="metric-table">
+            <tr>
+                <th>Model</th>
+                <th>Batch Latency (ms/sample)</th>
+                <th>Single Latency (ms)</th>
+                <th>Memory (bytes)</th>
+                <th>Complexity</th>
+            </tr>
+            {% for name, metrics in models.items() %}
+                {% if metrics.compute %}
+                <tr>
+                    <td>{{ name }}</td>
+                    <td>{{ "%.4f"|format(metrics.compute.batch_latency_ms) }}</td>
+                    <td>{{ "%.4f"|format(metrics.compute.single_latency_ms) }}</td>
+                    <td>{{ metrics.compute.memory_bytes }}</td>
+                    <td>
+                        {% if metrics.compute.complexity %}
+                            {% for k, v in metrics.compute.complexity.items() %}
+                                {{ k }}: {{ "%.2f"|format(v) if v is float else v }}<br>
+                            {% endfor %}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endif %}
+            {% endfor %}
+        </table>
+    </div>
+
+    <!-- V0.6 Empirical Robustness -->
+    <div class="card">
+        <h2>Empirical Robustness & Degradation</h2>
+        {% for name, metrics in models.items() %}
+            {% if metrics.robustness %}
+            <h3>{{ name }} - Robustness Score: {{ "%.4f"|format(metrics.robustness.robustness_score) }}</h3>
+            
+            {% if metrics.robustness.noise_robustness %}
+            <h4>Continuous Noise Injection</h4>
+            <ul>
+                {% for res in metrics.robustness.noise_robustness %}
+                    <li>Noise Level {{ res.level }}x STD: Score {{ "%.4f"|format(res.score) }} (Degraded by {{ "%.4f"|format(res.degradation) }})</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            
+            {% if metrics.robustness.missing_robustness %}
+            <h4>Missing Value Perturbation</h4>
+            <ul>
+                {% for res in metrics.robustness.missing_robustness %}
+                    {% if res.error %}
+                        <li>Drop {{ res.fraction*100 }}%: Pipeline failed to handle NaNs</li>
+                    {% else %}
+                        <li>Drop {{ res.fraction*100 }}%: Score {{ "%.4f"|format(res.score) }} (Degraded by {{ "%.4f"|format(res.degradation) }})</li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+            {% endif %}
+            
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <!-- V0.6 Hard Examples -->
+    <div class="card">
+        <h2>Hard Example Mining (Error Typology)</h2>
+        {% for name, metrics in models.items() %}
+            {% if metrics.hard_examples %}
+            <h3>{{ name }} - Top {{ metrics.hard_examples.top_k_count }} Hardest Examples</h3>
+            
+            {% if metrics.hard_examples.error_clusters %}
+            <h4>Error Profiles (K-Means Clustering)</h4>
+            <ul>
+                {% for cluster in metrics.hard_examples.error_clusters %}
+                    <li><strong>Cluster {{ cluster.cluster_id }} ({{ cluster.size }} samples):</strong> 
+                        {% for k, v in cluster.centroid.items() %}
+                            {{ k }}: {{ "%.2f"|format(v) }} | 
+                        {% endfor %}
+                    </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            
+            <h4>Qualitative Sample</h4>
+            <div style="overflow-x: auto;">
+                <table class="metric-table" style="font-size: 0.85em;">
+                    <tr>
+                        {% if metrics.hard_examples.hard_examples %}
+                            {% for k in metrics.hard_examples.hard_examples[0].keys() %}
+                                <th>{{ k }}</th>
+                            {% endfor %}
+                        {% endif %}
+                    </tr>
+                    {% for row in metrics.hard_examples.hard_examples %}
+                    <tr>
+                        {% for v in row.values() %}
+                            <td>{{ "%.4f"|format(v) if v is float else v }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <!-- V0.6 Model Agreement -->
+    {% if audit.agreement %}
+    <div class="card">
+        <h2>Model Agreement & Prediction Overlap</h2>
+        <table class="metric-table">
+            <tr>
+                <th>Model A</th>
+                <th>Model B</th>
+                <th>Metric</th>
+                <th>Agreement Score</th>
+                <th>Both Fail</th>
+                <th>Only A Fails</th>
+                <th>Only B Fails</th>
+            </tr>
+            {% for row in audit.agreement %}
+            <tr>
+                <td>{{ row.model_a }}</td>
+                <td>{{ row.model_b }}</td>
+                <td>{{ row.metric }}</td>
+                <td>{{ "%.4f"|format(row.score) }}</td>
+                <td>{{ row.both_fail_count|default(row.both_high_error) }}</td>
+                <td>{{ row.only_a_fails|default(row.only_a_high_error) }}</td>
+                <td>{{ row.only_b_fails|default(row.only_b_high_error) }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    {% endif %}
+\n    <h2>Reproducibility & Limitations</h2>
     <div class="card">
         <ul>
             {% for note in advisor.reproducibility_notes %}
