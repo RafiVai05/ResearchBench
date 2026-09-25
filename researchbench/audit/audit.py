@@ -22,7 +22,7 @@ def perform_research_audit(df, target, task, config=None):
     if config and "preprocessing" in config:
         pass
     else:
-        preproc_concerns.append("Preprocessing configuration not specified explicitly.")
+        pass
         
     repro_info = get_reproducibility_info()
     repro_info["dataset_shape"] = [health["profile"]["num_rows"], health["profile"]["num_cols"]]

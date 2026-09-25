@@ -125,6 +125,119 @@
     </div>
     {% endif %}
 
+    
+    <div class="card">
+        <h2>Probability Calibration Audit</h2>
+        {% for name, metrics in models.items() %}
+            {% if metrics.calibration %}
+            <h3>{{ name }}</h3>
+            <p><strong>ECE:</strong> {{ "%.4f"|format(metrics.calibration.ece) }}</p>
+            <p><strong>Brier Score:</strong> {{ "%.4f"|format(metrics.calibration.brier_score) }}</p>
+            {% if metrics.calibration.plot %}
+                <img src="data:image/png;base64,{{ metrics.calibration.plot }}" alt="Reliability Diagram for {{ name }}" style="max-width: 600px;">
+            {% endif %}
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <div class="card">
+        <h2>Model-Agnostic Feature Attribution</h2>
+        <p><em>Permutation importance evaluated on CV hold-out folds.</em></p>
+        {% for name, metrics in models.items() %}
+            {% if metrics.cv and metrics.cv.attribution %}
+            <h3>{{ name }}</h3>
+            {% if metrics.cv.attribution.plot %}
+                <img src="data:image/png;base64,{{ metrics.cv.attribution.plot }}" alt="Feature Attribution for {{ name }}" style="max-width: 800px;">
+            {% endif %}
+            {% endif %}
+        {% endfor %}
+    </div>
+    
+    {% if audit.drift and audit.drift.details %}
+    <div class="card">
+        <h2>Data Drift / Covariate Shift Audit</h2>
+        <p><strong>External Dataset:</strong> {{ audit.drift.external_dataset }}</p>
+        <p><strong>Features Shifted:</strong> {{ audit.drift.n_shifted_features }} / {{ audit.drift.n_features_tested }}</p>
+        <table class="metric-table">
+            <tr>
+                <th>Feature</th>
+                <th>Test</th>
+                <th>Statistic</th>
+                <th>p-value (Raw)</th>
+                <th>p-value (Adj)</th>
+                <th>Shift Detected</th>
+            </tr>
+            {% for row in audit.drift.details %}
+            <tr>
+                <td>{{ row.feature }}</td>
+                <td>{{ row.test }}</td>
+                <td>{{ "%.4f"|format(row.statistic) }}</td>
+                <td>{{ "%.4f"|format(row.p_value_raw) }}</td>
+                <td>{{ "%.4f"|format(row.p_value_adj) }}</td>
+                <td style="color: {% if row.shifted %}red{% else %}green{% endif %};">
+                    {{ "YES" if row.shifted else "NO" }}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    {% endif %}
+    
+    {% if audit.sensitivity %}
+    <div class="card">
+        <h2>Hyperparameter Sensitivity & Ablation</h2>
+        {% for name, res in audit.sensitivity.items() %}
+            {% if res %}
+            <h3>{{ name }}</h3>
+            <p><strong>Stability Score:</strong> {{ "%.4f"|format(res.stability_score) }}</p>
+            <p><strong>Tested Configurations:</strong> {{ res.tested_configurations }}</p>
+            <p><em>Variation: {{ "%.4f"|format(res.mean_performance) }} ± {{ "%.4f"|format(res.std_performance) }}</em></p>
+            {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if audit.artifact_audit %}
+    <div class="card">
+        <h2>Research Artifact Audit</h2>
+        
+        <h3>Artifact Inventory</h3>
+        <ul>
+            <li>Figures found: {{ audit.artifact_audit.inventory.figures_found }}</li>
+            <li>Tables found: {{ audit.artifact_audit.inventory.tables_found }}</li>
+            <li>Methodology PDF: {{ "Found" if audit.artifact_audit.inventory.methodology_found else "Not found" }}</li>
+            <li>Results PDF: {{ "Found" if audit.artifact_audit.inventory.results_found else "Not found" }}</li>
+        </ul>
+        
+        {% if audit.artifact_audit.figure_checks %}
+        <h3>Figure Quality Checks</h3>
+        <ul>
+            {% for chk in audit.artifact_audit.figure_checks %}
+            <li><strong>[{{ chk.severity|default('INFO') }}]</strong> {{ chk.figure|default('System') }}: {{ chk.issue|default(chk.warning) }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        
+        {% if audit.artifact_audit.table_checks %}
+        <h3>Table Validation</h3>
+        <ul>
+            {% for chk in audit.artifact_audit.table_checks %}
+            <li><strong>[{{ chk.severity }}]</strong> {{ chk.table }}: {{ chk.issue }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        
+        {% if audit.artifact_audit.consistency %}
+        <h3>Methodology / Results Consistency</h3>
+        <ul>
+            {% for chk in audit.artifact_audit.consistency %}
+            <li><strong>[{{ chk.severity|default('INFO') }}]</strong> {{ chk.document|default('System') }}: {{ chk.issue|default(chk.warning) }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+    {% endif %}
+
     <h2>Reproducibility & Limitations</h2>
     <div class="card">
         <ul>

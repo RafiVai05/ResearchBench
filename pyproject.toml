@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "researchbench"
-version = "0.4.0"
+version = "0.5.0"
 description = "An open-source research quality-control laboratory for machine-learning experiments."
 readme = "README.md"
 authors = [
@@ -39,6 +39,12 @@ huggingface = [
     "datasets>=2.0.0"
 ]
 stats = ["statsmodels>=0.14.0"]
+artifacts = [
+    "opencv-python>=4.8.0",
+    "pytesseract>=0.3.10",
+    "pymupdf>=1.23.0"
+]
+
 dev = [
     "pytest>=7.0",
     "build",

@@ -31,6 +31,31 @@ DEFAULT_CONFIG = {
         }
     },
     'subgroups': [],
+
+    'calibration': {
+        'enabled': True,
+        'bins': 10
+    },
+    'feature_attribution': {
+        'enabled': True,
+        'method': 'permutation',
+        'n_repeats': 10
+    },
+    'sensitivity_analysis': {
+        'enabled': False,
+        'parameters': {}
+    },
+    'drift_detection': {
+        'enabled': False,
+        'external_dataset': None
+    },
+    'artifact_audit': {
+        'enabled': False,
+        'figures_dir': 'figures/',
+        'tables_dir': 'tables/',
+        'methodology': 'methodology.pdf',
+        'results': 'results.pdf'
+    },
     'models': {
         'logistic_regression': {},
         'random_forest': {}

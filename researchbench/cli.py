@@ -144,6 +144,17 @@ def get_common_parser():
     resid_parser.add_argument("--preprocess", default="auto")
     resid_parser.add_argument("--config")
     
+# Export parser
+    parser_export = subparsers.add_parser("export", help="Export results to CSV/LaTeX")
+    parser_export.add_argument("history_file", type=str, help="Path to history JSON file (e.g., .researchbench/history.json)")
+    parser_export.add_argument("--formats", type=str, default="csv,latex", help="Comma-separated formats (e.g. csv,latex)")
+    parser_export.add_argument("--outdir", type=str, default="exports", help="Output directory")
+    
+    # Audit artifacts parser
+    parser_audit_art = subparsers.add_parser("audit-artifacts", help="Audit research artifacts (figures, tables, manuscripts)")
+    parser_audit_art.add_argument("--project-dir", type=str, default=".", help="Project directory to scan")
+    parser_audit_art.add_argument("--run-file", type=str, default=".researchbench/history.json", help="Path to ResearchBench history JSON")
+    
     return parser
 
 def execute_cli():
@@ -337,11 +348,44 @@ def execute_cli():
             if not models:
                 models = ["logistic_regression", "random_forest"]
                 
+
             audit_res = perform_research_audit(df, config["target"], task, config)
             model_res = evaluate_models(X, y, task, models, config=config, preprocess_mode="auto")
             adv_res = run_advisor(audit_res, model_res, task)
             
+            # v0.5 Additions
+            # Calibration
+            from researchbench.evaluation.calibration import calculate_calibration
+            if config.get("calibration", {}).get("enabled", False) and task == "classification":
+                for m_name, m_data in model_res.items():
+                    oof_y = m_data.get("cv", {}).get("oof_y")
+                    oof_probs = m_data.get("cv", {}).get("oof_probs")
+                    if oof_y and oof_probs:
+                        m_data["calibration"] = calculate_calibration(oof_y, oof_probs, n_bins=config["calibration"].get("bins", 10))
+            
+            # Sensitivity
+            from researchbench.evaluation.sensitivity import run_sensitivity_analysis
+            sensitivity_results = {}
+            if config.get("sensitivity_analysis", {}).get("enabled", False):
+                processed_models = getattr(evaluate_models, "last_processed", {})
+                for m_name, model_pipe in processed_models.items():
+                    res = run_sensitivity_analysis(model_pipe, X, y, task, config)
+                    if res: sensitivity_results[m_name] = res
+            audit_res["sensitivity"] = sensitivity_results
+            
+            # Drift
+            from researchbench.audit.drift import detect_drift
+            audit_res["drift"] = detect_drift(X, config)
+            
+            # Artifact Audit
+            audit_res["artifact_audit"] = {}
+            if config.get("artifact_audit", {}).get("enabled", False):
+                from researchbench.audit.artifacts import audit_artifacts
+                history_mock = [{"models": model_res, "config": config}]
+                audit_res["artifact_audit"] = audit_artifacts(".", history_mock)
+
             print_section("RUN CONFIGURATION RESULTS")
+
             for m, vals in model_res.items():
                 print(f"{m}: {vals['metrics']}")
                 if 'best_params' in vals:
@@ -379,6 +423,8 @@ def execute_cli():
                 print("\nNo obvious residual patterns detected.")
             
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
 

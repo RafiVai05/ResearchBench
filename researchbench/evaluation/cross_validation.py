@@ -10,13 +10,38 @@ def _eval_fold(model, X_train, X_test, y_train, y_test, task, main_metric_name, 
     m.fit(X_train, y_train)
     preds = m.predict(X_test)
     
+    probs = None
     if task == "classification":
         probs = m.predict_proba(X_test) if hasattr(m, "predict_proba") else None
         metrics, _ = evaluate_classification_metrics(y_test, preds, probs, config)
-        return metrics[main_metric_name]
+        score = metrics[main_metric_name]
     else:
         metrics = evaluate_regression_metrics(y_test, preds, config)
-        return metrics[main_metric_name]
+        score = metrics[main_metric_name]
+        
+    # Feature attribution (Permutation Importance) on this fold
+    attribution = None
+    if config and config.get("feature_attribution", {}).get("enabled", False):
+        try:
+            from sklearn.inspection import permutation_importance
+            n_repeats = config.get("feature_attribution", {}).get("n_repeats", 5)
+            # Use appropriate scoring
+            scoring = 'f1_macro' if task == 'classification' else 'neg_mean_absolute_error'
+            result = permutation_importance(m, X_test, y_test, n_repeats=n_repeats, random_state=42, scoring=scoring, n_jobs=1)
+            attribution = {
+                "importances_mean": result.importances_mean,
+                "importances_std": result.importances_std,
+                "features": X_test.columns.tolist() if hasattr(X_test, "columns") else [f"feature_{i}" for i in range(X_test.shape[1])]
+            }
+        except Exception as e:
+            attribution = {"error": str(e)}
+
+    return {
+        "score": score,
+        "y_test": y_test.tolist() if hasattr(y_test, "tolist") else list(y_test),
+        "probs": probs.tolist() if hasattr(probs, "tolist") and probs is not None else probs,
+        "attribution": attribution
+    }
 
 def run_cross_validation(model, X, y, task: str, folds: int = 5, config: dict = None, n_jobs: int = 1):
     strategy = config.get("evaluation", {}).get("strategy", "stratified") if config else "stratified"
@@ -56,11 +81,12 @@ def run_cross_validation(model, X, y, task: str, folds: int = 5, config: dict = 
         y_test = y_arr.iloc[test_idx] if hasattr(y_arr, 'iloc') else y_arr[test_idx]
         return X_train, X_test, y_train, y_test
         
-    fold_scores = Parallel(n_jobs=n_jobs)(
+    fold_results = Parallel(n_jobs=n_jobs)(
         delayed(_eval_fold)(model, *get_split(train_idx, test_idx), task, main_metric_name, config)
         for train_idx, test_idx in cv.split(X_arr, y_arr, groups=groups)
     )
             
+    fold_scores = [r["score"] for r in fold_results]
     mean_val = float(np.mean(fold_scores))
     std_val = float(np.std(fold_scores))
     
@@ -82,6 +108,35 @@ def run_cross_validation(model, X, y, task: str, folds: int = 5, config: dict = 
         except:
             pass
 
+    # Aggregate out-of-fold data for Calibration
+    oof_y = []
+    oof_probs = []
+    has_probs = True
+    for r in fold_results:
+        oof_y.extend(r["y_test"])
+        if r["probs"] is None:
+            has_probs = False
+        else:
+            oof_probs.extend(r["probs"])
+            
+    # Aggregate feature attribution
+    attribution_results = None
+    if config and config.get("feature_attribution", {}).get("enabled", False):
+        attr_means = []
+        features = None
+        for r in fold_results:
+            if r["attribution"] and "importances_mean" in r["attribution"]:
+                attr_means.append(r["attribution"]["importances_mean"])
+                features = r["attribution"]["features"]
+        if attr_means and features:
+            avg_importance = np.mean(attr_means, axis=0)
+            std_importance = np.std(attr_means, axis=0)
+            attribution_results = {
+                "features": features,
+                "importances_mean": avg_importance.tolist(),
+                "importances_std": std_importance.tolist()
+            }
+
     return {
         "metric": main_metric_name,
         "folds": fold_scores,
@@ -90,5 +145,8 @@ def run_cross_validation(model, X, y, task: str, folds: int = 5, config: dict = 
         "min": float(np.min(fold_scores)),
         "max": float(np.max(fold_scores)),
         "ci_lower": ci_lower,
-        "ci_upper": ci_upper
+        "ci_upper": ci_upper,
+        "oof_y": oof_y,
+        "oof_probs": oof_probs if has_probs else None,
+        "attribution": attribution_results
     }

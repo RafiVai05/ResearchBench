@@ -87,3 +87,59 @@ def generate_residual_plots(preds, residuals):
     plt.close(fig)
     return base64.b64encode(buf.getvalue()).decode("utf-8")
 
+
+def plot_calibration_curve(calibration_results, model_name, output_dir):
+    try:
+        import matplotlib.pyplot as plt
+        plt.figure(figsize=(8, 6))
+        
+        bins = calibration_results.get("bins", [])
+        if not bins:
+            return None
+            
+        prob_preds = [b["avg_prob"] for b in bins]
+        prob_trues = [b["avg_acc"] for b in bins]
+        
+        plt.plot(prob_preds, prob_trues, marker='o', linewidth=2, label=model_name)
+        plt.plot([0, 1], [0, 1], linestyle='--', color='gray', label='Perfectly Calibrated')
+        
+        ece = calibration_results.get("ece", 0)
+        brier = calibration_results.get("brier_score", 0)
+        plt.title(f"Reliability Diagram (ECE: {ece:.4f}, Brier: {brier:.4f})")
+        plt.xlabel("Mean Predicted Probability")
+        plt.ylabel("Fraction of Positives")
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        
+        return _fig_to_base64(plt.gcf())
+    except Exception as e:
+        return None
+
+def plot_permutation_importance(attribution_results, model_name, output_dir):
+    try:
+        import matplotlib.pyplot as plt
+        import numpy as np
+        
+        features = attribution_results.get("features", [])
+        means = attribution_results.get("importances_mean", [])
+        stds = attribution_results.get("importances_std", [])
+        
+        if not features or not means:
+            return None
+            
+        # Sort by mean
+        indices = np.argsort(means)[::-1]
+        sorted_features = [features[i] for i in indices]
+        sorted_means = [means[i] for i in indices]
+        sorted_stds = [stds[i] for i in indices]
+        
+        plt.figure(figsize=(10, 6))
+        plt.bar(range(len(sorted_means)), sorted_means, yerr=sorted_stds, align='center', alpha=0.8, ecolor='black', capsize=5)
+        plt.xticks(range(len(sorted_means)), sorted_features, rotation=45, ha='right')
+        plt.title(f"Permutation Feature Importance (CV Hold-out) - {model_name}")
+        plt.ylabel("Mean Importance (Decrease in Metric)")
+        plt.tight_layout()
+        
+        return _fig_to_base64(plt.gcf())
+    except Exception:
+        return None

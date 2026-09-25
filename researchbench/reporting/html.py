@@ -16,6 +16,16 @@ def generate_report(audit_results: dict, model_results: dict, advisor_results: d
     if audit_results["reproducibility"]["task"] == "regression":
         pass
         
+    from .visualizer import plot_calibration_curve, plot_permutation_importance
+    for m_name, m_data in model_results.items():
+        if m_data.get("calibration"):
+            cal_plot = plot_calibration_curve(m_data["calibration"], m_name, None)
+            m_data["calibration"]["plot"] = cal_plot
+            
+        if m_data.get("cv", {}).get("attribution"):
+            attr_plot = plot_permutation_importance(m_data["cv"]["attribution"], m_name, None)
+            m_data["cv"]["attribution"]["plot"] = attr_plot
+
     template_dir = os.path.join(os.path.dirname(__file__), "templates")
     env = Environment(loader=FileSystemLoader(template_dir))
     template = env.get_template("report.html")
