@@ -20,27 +20,27 @@ It is NOT intended to be another basic ML metrics calculator or leaderboard. It 
 - **HTML Reporting**: Generates standalone, publication-grade reports embedded with visual diagnostics.
 
 ## Quick Start
-`ash
+```bash
 pip install researchbench
 `
 
 Run a dataset profile:
-`ash
+```bash
 researchbench profile data.csv --target diagnosis
 `
 
 Audit the research quality of a dataset:
-`ash
+```bash
 researchbench audit data.csv --target diagnosis --task classification
 `
 
 Evaluate models with stability and baselines:
-`ash
+```bash
 researchbench evaluate data.csv --target diagnosis --task classification --models logistic_regression random_forest
 `
 
 Generate a comprehensive HTML report:
-`ash
+```bash
 researchbench report data.csv --target diagnosis --task classification --models logistic_regression random_forest
 `
 
