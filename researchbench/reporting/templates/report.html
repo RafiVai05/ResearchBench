@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ResearchBench Report</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; line-height: 1.6; max-width: 1000px; margin: 0 auto; padding: 2rem; color: #333; }
+        h1, h2, h3 { color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 0.3em; }
+        .card { border: 1px solid #ddd; border-radius: 4px; padding: 1.5rem; margin-bottom: 1.5rem; background: #fff; }
+        .metric-table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; }
+        .metric-table th, .metric-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .metric-table th { background: #f8f9fa; }
+        .observation { background: #e8f4f8; padding: 10px; border-left: 4px solid #17a2b8; margin-bottom: 10px; }
+        .concern { background: #fff3cd; padding: 10px; border-left: 4px solid #ffc107; margin-bottom: 10px; }
+        .suggestion { background: #d4edda; padding: 10px; border-left: 4px solid #28a745; margin-bottom: 10px; }
+        .plot { text-align: center; margin: 2rem 0; }
+        .plot img { max-width: 100%; border: 1px solid #eee; }
+    </style>
+</head>
+<body>
+    <h1>ResearchBench Quality Report</h1>
+    <p><strong>Dataset:</strong> {{ dataset_name }} | <strong>Target:</strong> {{ audit.reproducibility.target }} | <strong>Task:</strong> {{ audit.reproducibility.task }}</p>
+    
+    <h2>1. Research Advisor</h2>
+    <div class="card">
+        <h3>Observations</h3>
+        {% for obs in advisor.observations %}
+            <div class="observation">ℹ️ {{ obs }}</div>
+        {% endfor %}
+        
+        <h3>Potential Concerns</h3>
+        {% if advisor.potential_concerns %}
+            {% for concern in advisor.potential_concerns %}
+                <div class="concern">⚠️ {{ concern }}</div>
+            {% endfor %}
+        {% else %}
+            <div class="observation">✓ No major methodological concerns detected.</div>
+        {% endif %}
+        
+        <h3>Suggested Investigations</h3>
+        {% for suggestion in advisor.suggested_investigations %}
+            <div class="suggestion">💡 {{ suggestion }}</div>
+        {% endfor %}
+    </div>
+    
+    <h2>2. Model Comparison</h2>
+    <div class="card">
+        <table class="metric-table">
+            <thead>
+                <tr>
+                    <th>Model</th>
+                    <th>Base Metric</th>
+                    <th>CV Mean</th>
+                    <th>CV Std</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m_name, res in models.items() %}
+                <tr>
+                    <td>{{ m_name }}</td>
+                    <td>
+                        {% if audit.reproducibility.task == 'classification' %}
+                            {{ "%.3f"|format(res.metrics['Macro F1']) }} (F1)
+                        {% else %}
+                            {{ "%.3f"|format(res.metrics['MAE']) }} (MAE)
+                        {% endif %}
+                    </td>
+                    <td>{% if res.cv %}{{ "%.3f"|format(res.cv.mean) }}{% else %}N/A{% endif %}</td>
+                    <td>{% if res.cv %}{{ "%.3f"|format(res.cv.std) }}{% else %}N/A{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        {% if plots.cv_boxplot %}
+        <div class="plot">
+            <img src="data:image/png;base64,{{ plots.cv_boxplot }}" alt="CV Distribution">
+        </div>
+        {% endif %}
+    </div>
+    
+    <h2>3. Dataset Health Profile</h2>
+    <div class="card">
+        <ul>
+            <li>Rows: {{ audit.health.profile.num_rows }}</li>
+            <li>Columns: {{ audit.health.profile.num_cols }}</li>
+            <li>Missing: {{ audit.health.profile.missing_percentage }}%</li>
+            <li>Duplicates: {{ audit.health.profile.duplicate_rows }}</li>
+        </ul>
+        {% if plots.target_dist %}
+        <div class="plot">
+            <img src="data:image/png;base64,{{ plots.target_dist }}" alt="Target Distribution">
+        </div>
+        {% endif %}
+    </div>
+
+    <h2>4. Reproducibility & Limitations</h2>
+    <div class="card">
+        <ul>
+            {% for note in advisor.reproducibility_notes %}
+                <li>{{ note }}</li>
+            {% endfor %}
+        </ul>
+        <h4>Limitations</h4>
+        <ul>
+            {% for lim in advisor.limitations %}
+                <li>{{ lim }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+</body>
+</html>
