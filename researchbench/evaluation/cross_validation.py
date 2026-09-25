@@ -10,15 +10,15 @@ def run_cross_validation(model, X, y, task: str, folds: int = 5):
     else:
         cv = KFold(n_splits=folds, shuffle=True, random_state=42)
         
-    X_arr = np.array(X)
-    y_arr = np.array(y)
+    X_arr = X
+    y_arr = y
     
     fold_scores = []
     main_metric_name = "Macro F1" if task == "classification" else "MAE"
     
     for train_idx, test_idx in cv.split(X_arr, y_arr):
-        X_train, X_test = X_arr[train_idx], X_arr[test_idx]
-        y_train, y_test = y_arr[train_idx], y_arr[test_idx]
+        X_train, X_test = X_arr.iloc[train_idx] if hasattr(X_arr, 'iloc') else X_arr[train_idx], X_arr.iloc[test_idx] if hasattr(X_arr, 'iloc') else X_arr[test_idx]
+        y_train, y_test = y_arr.iloc[train_idx] if hasattr(y_arr, 'iloc') else y_arr[train_idx], y_arr.iloc[test_idx] if hasattr(y_arr, 'iloc') else y_arr[test_idx]
         
         m = clone(model)
         m.fit(X_train, y_train)

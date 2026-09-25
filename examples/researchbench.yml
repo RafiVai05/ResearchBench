@@ -1,0 +1,31 @@
+dataset: examples/classification.csv
+task: classification
+target: target
+
+preprocessing:
+  numerical:
+    imputation: median
+    scaling: standard
+  categorical:
+    imputation: most_frequent
+    encoding: onehot
+
+evaluation:
+  cv:
+    folds: 5
+  seeds:
+    - 42
+    - 123
+    - 456
+
+models:
+  random_forest:
+    n_estimators: [50, 100]
+    max_depth: [5, null]
+  logistic_regression:
+    C: [0.1, 1.0]
+
+audit:
+  thresholds:
+    missing_percentage: 20
+    class_imbalance_ratio: 4

@@ -1,6 +1,6 @@
 import pandas as pd
 
-def check_imbalance(df: pd.DataFrame, target: str, task: str) -> list:
+def check_imbalance(df: pd.DataFrame, target: str, task: str, config: dict = None) -> list:
     concerns = []
     if task != "classification" or target not in df.columns:
         return concerns

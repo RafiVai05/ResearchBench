@@ -5,8 +5,8 @@ from .classification import evaluate_classification_metrics
 from .regression import evaluate_regression_metrics
 
 def run_stability_analysis(model, X, y, task: str, seeds: list):
-    X_arr = np.array(X)
-    y_arr = np.array(y)
+    X_arr = X
+    y_arr = y
     
     seed_scores = []
     main_metric = "Macro F1" if task == "classification" else "MAE"

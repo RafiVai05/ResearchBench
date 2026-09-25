@@ -1,7 +1,7 @@
 import pandas as pd
 from .profiler import profile_dataset
 
-def audit_dataset_health(df: pd.DataFrame, target: str = None) -> dict:
+def audit_dataset_health(df: pd.DataFrame, target: str = None, config: dict = None) -> dict:
     """
     Perform a health audit on the dataset, finding potential concerns.
     """
@@ -29,7 +29,11 @@ def audit_dataset_health(df: pd.DataFrame, target: str = None) -> dict:
             concerns.append(f"Potential identifier columns detected: {', '.join(profile['id_like_cols'])}")
             
     # Feature to sample ratio
-    if n > 0 and (p / n) > 0.2:
+    
+    fs_ratio = 0.2
+    if config and "audit" in config and "thresholds" in config["audit"]:
+        fs_ratio = config["audit"]["thresholds"].get("feature_sample_ratio", 0.2)
+    if n > 0 and (p / n) > fs_ratio:
         concerns.append(f"High feature-to-sample ratio ({p}/{n}). Risk of overfitting.")
         
     # Identical features (expensive for large df, do basic check if small)

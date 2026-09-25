@@ -1,4 +1,10 @@
 import os
+
+with open('researchbench/reporting/html.py', 'r', encoding='utf-8') as f:
+    html = f.read()
+
+# I will rewrite the whole file to be safe
+content = '''import os
 from jinja2 import Environment, FileSystemLoader
 from .visualizer import plot_target_distribution, plot_cv_boxplot
 
@@ -30,3 +36,6 @@ def generate_report(audit_results: dict, model_results: dict, advisor_results: d
     
     with open(output_path, "w", encoding='utf-8') as f:
         f.write(html_content)
+'''
+with open('researchbench/reporting/html.py', 'w', encoding='utf-8') as f:
+    f.write(content)

@@ -1,4 +1,6 @@
-from .leakage import check_leakage
+import os
+
+content = '''from .leakage import check_leakage
 from .imbalance import check_imbalance
 from .metrics import check_metrics_suitability
 from .sample_size import check_sample_size
@@ -49,3 +51,6 @@ def perform_research_audit(df, target, task, config=None):
         "all_concerns": list(set(all_concerns)),
         "reproducibility": repro_info
     }
+'''
+with open('researchbench/audit/audit.py', 'w', encoding='utf-8') as f:
+    f.write(content)

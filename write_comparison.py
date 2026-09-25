@@ -1,4 +1,6 @@
-from .baselines import get_baseline_models
+import os
+
+content = '''from .baselines import get_baseline_models
 from .classification import get_classification_models, evaluate_classification_metrics
 from .regression import get_regression_models, evaluate_regression_metrics
 from .cross_validation import run_cross_validation
@@ -68,3 +70,7 @@ def evaluate_models(X, y, task: str, model_names: list, config: dict = None, fol
         results[name]["cv"] = cv_res
         
     return results
+'''
+
+with open('researchbench/evaluation/comparison.py', 'w', encoding='utf-8') as f:
+    f.write(content)
