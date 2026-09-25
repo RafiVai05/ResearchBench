@@ -1,0 +1,101 @@
+Age,Gender,Patient_ID,Review,target
+58,M,7,Excellent recovery,0
+48,F,9,Excellent recovery,0
+34,M,7,No change,0
+62,F,1,Good response to treatment,1
+27,F,1,Excellent recovery,0
+40,F,9,Excellent recovery,0
+58,M,9,Bad reaction,1
+38,M,4,Excellent recovery,0
+42,M,9,Excellent recovery,1
+30,M,3,Bad reaction,1
+30,F,7,No change,0
+43,M,6,Excellent recovery,1
+55,M,8,Bad reaction,0
+59,M,9,Good response to treatment,1
+43,M,5,No change,1
+22,M,1,Good response to treatment,0
+41,F,3,Good response to treatment,1
+21,M,8,Bad reaction,1
+43,F,6,Excellent recovery,1
+63,M,8,Bad reaction,1
+49,F,9,Bad reaction,1
+57,M,4,Bad reaction,0
+21,M,1,Bad reaction,1
+40,F,1,No change,0
+52,F,4,Excellent recovery,1
+31,F,7,Good response to treatment,0
+41,M,2,Good response to treatment,0
+63,F,3,Excellent recovery,1
+44,M,1,Good response to treatment,1
+68,M,5,Excellent recovery,1
+46,F,1,Good response to treatment,0
+61,F,8,Bad reaction,1
+47,M,1,Good response to treatment,0
+35,M,1,Excellent recovery,0
+34,F,2,Excellent recovery,0
+66,F,2,Excellent recovery,1
+63,F,6,Excellent recovery,1
+22,M,7,Excellent recovery,0
+56,M,5,No change,0
+26,M,1,No change,1
+40,M,1,Good response to treatment,0
+28,M,3,Excellent recovery,1
+58,M,2,Good response to treatment,0
+37,F,5,Excellent recovery,1
+23,M,6,Excellent recovery,0
+44,M,7,No change,1
+33,M,4,No change,0
+69,F,7,Bad reaction,1
+28,M,8,No change,1
+45,M,1,Bad reaction,0
+21,F,6,Bad reaction,0
+39,M,8,Bad reaction,1
+47,M,5,Bad reaction,0
+66,M,4,Bad reaction,1
+26,M,2,Good response to treatment,0
+63,M,6,No change,1
+27,F,6,Bad reaction,1
+66,F,1,Excellent recovery,1
+54,F,9,No change,1
+33,M,6,No change,1
+36,M,3,Bad reaction,1
+55,M,4,Good response to treatment,0
+69,F,4,Bad reaction,0
+59,M,3,Good response to treatment,0
+23,M,3,Excellent recovery,1
+21,F,3,No change,1
+25,M,4,Excellent recovery,1
+61,F,7,Good response to treatment,1
+23,F,4,Good response to treatment,0
+48,F,9,Excellent recovery,0
+37,M,1,Good response to treatment,1
+45,M,8,Excellent recovery,0
+63,M,7,No change,0
+53,M,2,Excellent recovery,1
+29,M,8,No change,0
+55,M,1,Excellent recovery,1
+33,M,9,Good response to treatment,0
+50,F,9,Excellent recovery,1
+67,M,2,Good response to treatment,1
+34,F,7,Excellent recovery,1
+27,M,3,Excellent recovery,1
+33,M,7,Bad reaction,0
+42,M,9,Good response to treatment,1
+59,F,4,Bad reaction,1
+40,F,1,Good response to treatment,1
+35,F,2,Bad reaction,0
+64,F,1,No change,1
+37,M,5,Excellent recovery,0
+66,F,5,Good response to treatment,1
+43,M,7,Good response to treatment,0
+45,M,9,Excellent recovery,0
+44,F,9,Good response to treatment,1
+64,F,3,Good response to treatment,0
+60,F,3,Bad reaction,1
+48,F,3,Good response to treatment,1
+34,F,4,No change,1
+64,F,8,No change,0
+20,F,6,Excellent recovery,0
+44,F,8,Good response to treatment,1
+26,M,1,Excellent recovery,1

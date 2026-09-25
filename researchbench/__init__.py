@@ -2,7 +2,7 @@
 ResearchBench - An open-source research quality-control laboratory for machine-learning experiments.
 """
 
-__version__ = '0.3.0'
+__version__ = '0.4.0'
 
 from .dataset.profiler import profile_dataset
 from .dataset.health import audit_dataset_health

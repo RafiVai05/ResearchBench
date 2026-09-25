@@ -5,6 +5,8 @@ from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, PowerTransformer, PolynomialFeatures, OneHotEncoder, FunctionTransformer
 
+from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
+
 def get_transformer(name: str):
     name = name.lower()
     if name == 'standard':
@@ -27,6 +29,10 @@ def get_transformer(name: str):
         return SimpleImputer(strategy='most_frequent')
     elif name == 'onehot':
         return OneHotEncoder(handle_unknown='ignore', sparse_output=False)
+    elif name == 'tfidf':
+        return TfidfVectorizer()
+    elif name == 'count':
+        return CountVectorizer()
     else:
         raise ValueError(f"Unknown transformer: {name}")
 
@@ -43,11 +49,19 @@ def build_preprocessor(X: pd.DataFrame, config: dict = None) -> ColumnTransforme
     cat_cols = X.select_dtypes(exclude=[np.number]).columns.tolist()
     
     transformers = []
-    
-    # Track which columns have explicit transformers
     explicit_cols = set()
     
-    num_conf = preproc_config.get('numerical', {})
+    text_conf = preproc_config.get('text', {})
+    if isinstance(text_conf, dict) and 'columns' in text_conf:
+        text_cols = text_conf['columns']
+        vectorizer_name = text_conf.get('vectorizer', 'tfidf')
+        
+        for c in text_cols:
+            if c in X.columns:
+                transformers.append((f"text_{c}", get_transformer(vectorizer_name), c))
+                explicit_cols.add(c)
+                
+    num_conf = preproc_config.get("numerical", {})
     if isinstance(num_conf, dict) and 'columns' in num_conf:
         for col_def in num_conf['columns']:
             names = col_def.get('names', [])

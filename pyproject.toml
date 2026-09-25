@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "researchbench"
-version = "0.3.0"
+version = "0.4.0"
 description = "An open-source research quality-control laboratory for machine-learning experiments."
 readme = "README.md"
 authors = [
@@ -31,6 +31,13 @@ dependencies = [
 requires-python = ">=3.10"
 
 [project.optional-dependencies]
+torch = [
+    "torch>=2.0.0"
+]
+huggingface = [
+    "transformers>=4.0.0",
+    "datasets>=2.0.0"
+]
 stats = ["statsmodels>=0.14.0"]
 dev = [
     "pytest>=7.0",

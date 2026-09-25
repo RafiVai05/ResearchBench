@@ -1,4 +1,9 @@
+import os
 
+with open('researchbench/audit/statistics.py', 'r', encoding='utf-8') as f:
+    stats_code = f.read()
+
+replacement = '''
 import numpy as np
 from scipy import stats
 from sklearn.model_selection import KFold
@@ -166,7 +171,9 @@ def perform_statistical_comparison(model_results: dict, config: dict, processed_
     else:
         # Invalid / skipped
         pass
+'''
 
+stats_code = replacement + '''
     # Holm correction
     if correction == "holm" and raw_p_values:
         sorted_indices = np.argsort(raw_p_values)
@@ -191,3 +198,7 @@ def perform_statistical_comparison(model_results: dict, config: dict, processed_
         "comparisons": comparisons,
         "warning": "5x2cv is the preferred valid methodological comparison." if method == "5x2cv" else "Exploratory statistical comparison. Does not establish generalized scientific supremacy."
     }
+'''
+
+with open('researchbench/audit/statistics.py', 'w', encoding='utf-8') as f:
+    f.write(stats_code)

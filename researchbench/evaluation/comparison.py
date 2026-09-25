@@ -70,4 +70,5 @@ def evaluate_models(X, y, task: str, model_names: list, config: dict = None, fol
         cv_res = run_cross_validation(pipeline, X, y, task, folds=folds, config=config, n_jobs=n_jobs)
         results[name]["cv"] = cv_res
         
+        evaluate_models.last_processed = processed_models
     return results

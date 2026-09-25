@@ -1,4 +1,9 @@
-from sklearn.model_selection import StratifiedKFold, KFold, GroupKFold, TimeSeriesSplit
+import os
+
+with open('researchbench/evaluation/cross_validation.py', 'r', encoding='utf-8') as f:
+    cv_code = f.read()
+
+replacement = '''from sklearn.model_selection import StratifiedKFold, KFold, GroupKFold, TimeSeriesSplit
 from sklearn.base import clone
 import numpy as np
 from joblib import Parallel, delayed
@@ -60,35 +65,10 @@ def run_cross_validation(model, X, y, task: str, folds: int = 5, config: dict = 
         delayed(_eval_fold)(model, *get_split(train_idx, test_idx), task, main_metric_name, config)
         for train_idx, test_idx in cv.split(X_arr, y_arr, groups=groups)
     )
-            
-    mean_val = float(np.mean(fold_scores))
-    std_val = float(np.std(fold_scores))
-    
-    ci_lower = None
-    ci_upper = None
-    
-    stats_config = config.get("statistics", {}).get("confidence_intervals", {}) if config else {}
-    if stats_config.get("enabled", False):
-        try:
-            B = stats_config.get("bootstrap_samples", 1000)
-            level = stats_config.get("level", 0.95)
-            boot_means = []
-            for _ in range(B):
-                sample = np.random.choice(fold_scores, size=len(fold_scores), replace=True)
-                boot_means.append(np.mean(sample))
-            alpha = 1.0 - level
-            ci_lower = float(np.percentile(boot_means, alpha/2 * 100))
-            ci_upper = float(np.percentile(boot_means, (1 - alpha/2) * 100))
-        except:
-            pass
+'''
 
-    return {
-        "metric": main_metric_name,
-        "folds": fold_scores,
-        "mean": mean_val,
-        "std": std_val,
-        "min": float(np.min(fold_scores)),
-        "max": float(np.max(fold_scores)),
-        "ci_lower": ci_lower,
-        "ci_upper": ci_upper
-    }
+import re
+cv_code = re.sub(r'from sklearn\.model_selection.*?for train_idx, test_idx in cv\.split\(X_arr, y_arr\)\n    \)', replacement.strip(), cv_code, flags=re.DOTALL)
+
+with open('researchbench/evaluation/cross_validation.py', 'w', encoding='utf-8') as f:
+    f.write(cv_code)
