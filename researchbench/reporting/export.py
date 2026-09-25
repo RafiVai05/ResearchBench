@@ -12,7 +12,18 @@ def export_results(history_path, formats, outdir):
     if not history:
         raise ValueError("History is empty")
         
-    latest = history[-1]
+    if isinstance(history, list):
+        # This is history.json, load the actual latest run
+        latest_id = history[-1].get("id")
+        run_file = os.path.join(os.path.dirname(history_path), "experiments", f"{latest_id}.json")
+        if not os.path.exists(run_file):
+            raise FileNotFoundError(f"Run file not found: {run_file}")
+        with open(run_file, 'r', encoding='utf-8') as f:
+            latest = json.load(f)
+    else:
+        # User passed a direct run file
+        latest = history
+
     os.makedirs(outdir, exist_ok=True)
     
     # 1. Model comparison table
