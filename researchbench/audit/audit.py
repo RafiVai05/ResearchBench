@@ -14,6 +14,9 @@ def perform_research_audit(df, target, task, config=None):
     has_outliers = dist.get("has_outliers", False)
     
     leakage_concerns = check_leakage(df, target)
+    from .leakage import profile_predictive_leakage
+    pred_leakage = profile_predictive_leakage(df, target, task)
+    leakage_concerns.extend(pred_leakage)
     imbalance_concerns = check_imbalance(df, target, task, config)
     metric_concerns = check_metrics_suitability(task, has_imbalance, has_outliers)
     sample_concerns = check_sample_size(health["profile"]["num_rows"], health["profile"]["num_cols"])

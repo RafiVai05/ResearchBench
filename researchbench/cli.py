@@ -428,8 +428,10 @@ def execute_cli():
                     oof_y = m_data.get("cv", {}).get("oof_y")
                     oof_preds = m_data.get("cv", {}).get("oof_preds")
                     oof_probs = m_data.get("cv", {}).get("oof_probs")
-                    if oof_y and oof_preds:
-                        model_res[m_name]["hard_examples"] = mine_hard_examples(oof_y, oof_preds, oof_probs, X, task)
+                    oof_idx = m_data.get("cv", {}).get("oof_idx")
+                    if oof_y and oof_preds and oof_idx:
+                        X_oof = X.iloc[oof_idx] if hasattr(X, "iloc") else X[oof_idx]
+                        model_res[m_name]["hard_examples"] = mine_hard_examples(oof_y, oof_preds, oof_probs, X_oof, task)
                         
             # Model Agreement
             from researchbench.evaluation.agreement import evaluate_agreement
@@ -444,6 +446,62 @@ def execute_cli():
                         if true_y is None: true_y = oof_y
                 if true_y is not None:
                     audit_res["agreement"] = evaluate_agreement(preds_dict, true_y, task)
+            # v0.7 Additions
+            # Surrogate XAI
+            from researchbench.evaluation.explainability import extract_surrogate_rules, find_error_slices
+            if config.get("xai", {}).get("enabled", False):
+                for m_name, m_data in model_res.items():
+                    oof_preds = m_data.get("cv", {}).get("oof_preds")
+                    oof_idx = m_data.get("cv", {}).get("oof_idx")
+                    if oof_preds and oof_idx:
+                        X_oof = X.iloc[oof_idx] if hasattr(X, "iloc") else X[oof_idx]
+                        model_res[m_name]["surrogate_rules"] = extract_surrogate_rules(X_oof, oof_preds, task)
+                        
+            # Error Slicing
+            if config.get("slice_finder", {}).get("enabled", False):
+                for m_name, m_data in model_res.items():
+                    oof_y = m_data.get("cv", {}).get("oof_y")
+                    oof_preds = m_data.get("cv", {}).get("oof_preds")
+                    oof_probs = m_data.get("cv", {}).get("oof_probs")
+                    
+                    if oof_y and oof_preds:
+                        import numpy as np
+                        y_t = np.array(oof_y)
+                        y_p = np.array(oof_preds)
+                        if task == "classification":
+                            if oof_probs is not None:
+                                oof_probs_arr = np.array(oof_probs)
+                                if oof_probs_arr.ndim == 2 and oof_probs_arr.shape[1] == 2:
+                                    prob_true = np.where(y_t == 1, oof_probs_arr[:, 1], oof_probs_arr[:, 0])
+                                    errs = 1.0 - prob_true
+                                else:
+                                    errs = (y_t != y_p).astype(float)
+                            else:
+                                errs = (y_t != y_p).astype(float)
+                        else:
+                            errs = np.abs(y_t - y_p)
+                        oof_idx = m_data.get("cv", {}).get("oof_idx")
+                        if oof_idx:
+                            X_oof = X.iloc[oof_idx] if hasattr(X, "iloc") else X[oof_idx]
+                            model_res[m_name]["error_slices"] = find_error_slices(X_oof, errs)
+                        
+            # OOD Detection
+            from researchbench.audit.ood import detect_ood_correlation
+            if config.get("ood_detection", {}).get("enabled", False):
+                for m_name, m_data in model_res.items():
+                    oof_y = m_data.get("cv", {}).get("oof_y")
+                    oof_preds = m_data.get("cv", {}).get("oof_preds")
+                    if oof_y and oof_preds:
+                        import numpy as np
+                        y_t = np.array(oof_y)
+                        y_p = np.array(oof_preds)
+                        errs = (y_t != y_p).astype(float) if task == "classification" else np.abs(y_t - y_p)
+                        oof_idx = m_data.get("cv", {}).get("oof_idx")
+                        if oof_idx:
+                            X_oof = X.iloc[oof_idx] if hasattr(X, "iloc") else X[oof_idx]
+                            # Use X for isolation forest train, X_oof for scoring
+                            model_res[m_name]["ood"] = detect_ood_correlation(X, X_oof, errs)
+
             print_section("RUN CONFIGURATION RESULTS")
 
             for m, vals in model_res.items():

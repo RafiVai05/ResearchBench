@@ -5,7 +5,7 @@ from joblib import Parallel, delayed
 from .classification import evaluate_classification_metrics
 from .regression import evaluate_regression_metrics
 
-def _eval_fold(model, X_train, X_test, y_train, y_test, task, main_metric_name, config=None):
+def _eval_fold(model, X_train, X_test, y_train, y_test, test_idx, task, main_metric_name, config=None):
     m = clone(model)
     m.fit(X_train, y_train)
     preds = m.predict(X_test)
@@ -39,7 +39,9 @@ def _eval_fold(model, X_train, X_test, y_train, y_test, task, main_metric_name, 
     return {
         "score": score,
         "y_test": y_test.tolist() if hasattr(y_test, "tolist") else list(y_test),
+        "preds": preds.tolist() if hasattr(preds, "tolist") else list(preds),
         "probs": probs.tolist() if hasattr(probs, "tolist") and probs is not None else probs,
+        "test_idx": test_idx.tolist() if hasattr(test_idx, "tolist") else list(test_idx),
         "attribution": attribution
     }
 
@@ -82,7 +84,7 @@ def run_cross_validation(model, X, y, task: str, folds: int = 5, config: dict = 
         return X_train, X_test, y_train, y_test
         
     fold_results = Parallel(n_jobs=n_jobs)(
-        delayed(_eval_fold)(model, *get_split(train_idx, test_idx), task, main_metric_name, config)
+        delayed(_eval_fold)(model, *get_split(train_idx, test_idx), test_idx, task, main_metric_name, config)
         for train_idx, test_idx in cv.split(X_arr, y_arr, groups=groups)
     )
             
@@ -106,14 +108,16 @@ def run_cross_validation(model, X, y, task: str, folds: int = 5, config: dict = 
             ci_lower = float(np.percentile(boot_means, alpha/2 * 100))
             ci_upper = float(np.percentile(boot_means, (1 - alpha/2) * 100))
         except:
-            pass
-
-    # Aggregate out-of-fold data for Calibration
+            pass    # Aggregate out-of-fold data for Calibration
     oof_y = []
+    oof_preds = []
     oof_probs = []
+    oof_idx = []
     has_probs = True
     for r in fold_results:
         oof_y.extend(r["y_test"])
+        oof_preds.extend(r["preds"])
+        oof_idx.extend(r["test_idx"])
         if r["probs"] is None:
             has_probs = False
         else:
@@ -143,10 +147,10 @@ def run_cross_validation(model, X, y, task: str, folds: int = 5, config: dict = 
         "mean": mean_val,
         "std": std_val,
         "min": float(np.min(fold_scores)),
-        "max": float(np.max(fold_scores)),
-        "ci_lower": ci_lower,
+        "max": float(np.max(fold_scores)),        "ci_lower": ci_lower,
         "ci_upper": ci_upper,
         "oof_y": oof_y,
+        "oof_preds": oof_preds,
         "oof_probs": oof_probs if has_probs else None,
         "attribution": attribution_results
     }

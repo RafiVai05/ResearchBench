@@ -377,6 +377,67 @@
         </table>
     </div>
     {% endif %}
+\n    
+
+    <!-- V0.7 Global Surrogate Explainer -->
+    <div class="card">
+        <h2>Global Surrogate Explainer (XAI)</h2>
+        <p><em>Extracted logical rules mimicking the model's global prediction behavior.</em></p>
+        {% for name, metrics in models.items() %}
+            {% if metrics.surrogate_rules %}
+            <h3>{{ name }}</h3>
+            <ul>
+                {% for r in metrics.surrogate_rules %}
+                <li><strong>IF</strong> {{ r.rule }} <strong>THEN</strong> Predict {{ "%.3f"|format(r.prediction) }} (Coverage: {{ r.samples }} samples)</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <!-- V0.7 Rule-Based Error Slicing -->
+    <div class="card">
+        <h2>Rule-Based Error Slicing (SliceFinder)</h2>
+        <p><em>Exact logical boundaries isolating where the model severely underperforms.</em></p>
+        {% for name, metrics in models.items() %}
+            {% if metrics.error_slices %}
+            <h3>{{ name }}</h3>
+            <ul>
+                {% for r in metrics.error_slices %}
+                <li><strong>SLICE:</strong> {{ r.rule }}<br>
+                <strong>Average Error in Slice:</strong> {{ "%.4f"|format(r.prediction) }} (N={{ r.samples }})</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <!-- V0.7 Out-of-Distribution Detection -->
+    <div class="card">
+        <h2>Out-of-Distribution (OOD) Anomaly Correlation</h2>
+        <p><em>If validation errors highly correlate with Anomaly Scores, the model is likely failing on junk data.</em></p>
+        <table class="metric-table">
+            <tr>
+                <th>Model</th>
+                <th>Error-Anomaly Correlation</th>
+                <th>Avg Error (Anomalous 10%)</th>
+                <th>Avg Error (Normal 90%)</th>
+                <th>Risk Ratio</th>
+            </tr>
+            {% for name, metrics in models.items() %}
+                {% if metrics.ood %}
+                <tr>
+                    <td>{{ name }}</td>
+                    <td>{{ "%.4f"|format(metrics.ood.anomaly_error_correlation) }}</td>
+                    <td>{{ "%.4f"|format(metrics.ood.mean_error_anomalous) }}</td>
+                    <td>{{ "%.4f"|format(metrics.ood.mean_error_normal) }}</td>
+                    <td>{{ "%.2f"|format(metrics.ood.ratio) }}x</td>
+                </tr>
+                {% endif %}
+            {% endfor %}
+        </table>
+    </div>
+
 \n    <h2>Reproducibility & Limitations</h2>
     <div class="card">
         <ul>
