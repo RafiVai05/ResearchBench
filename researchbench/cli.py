@@ -196,7 +196,30 @@ def execute_cli():
                 print("No history found.")
             return
 
+
+        if args.command == "export":
+            from researchbench.reporting.export import export_results
+            if not os.path.exists(args.history_file):
+                print(f"History file not found: {args.history_file}")
+                return
+            export_results(args.history_file, args.formats.split(","), args.outdir)
+            print(f"Exported results to {args.outdir}")
+            return
+            
+        if args.command == "audit-artifacts":
+            from researchbench.audit.artifacts import audit_artifacts
+            history = []
+            if os.path.exists(args.run_file):
+                import json
+                with open(args.run_file, "r") as f:
+                    history = json.load(f)
+            report = audit_artifacts(args.project_dir, history)
+            import json
+            print(json.dumps(report, indent=2))
+            return
+            
         if args.command == "compare":
+
             history_path = ".researchbench/history.json"
             if not os.path.exists(history_path):
                 print("No history found.")
