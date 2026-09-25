@@ -11,7 +11,7 @@ def get_regression_models():
         "random_forest": RandomForestRegressor(random_state=42)
     }
 
-def evaluate_regression_metrics(y_true, y_pred):
+def evaluate_regression_metrics(y_true, y_pred, config=None):
     return {
         "MAE": mean_absolute_error(y_true, y_pred),
         "MSE": mean_squared_error(y_true, y_pred),

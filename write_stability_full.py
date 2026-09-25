@@ -1,11 +1,13 @@
-from sklearn.model_selection import StratifiedKFold, KFold
+import os
+
+content = '''from sklearn.model_selection import StratifiedKFold, KFold
 from sklearn.base import clone
 import numpy as np
 from joblib import Parallel, delayed
 from .classification import evaluate_classification_metrics
 from .regression import evaluate_regression_metrics
 
-def _eval_seed(model, X, y, task, seed, main_metric_name, config=None):
+def _eval_seed(model, X, y, task, seed, main_metric_name):
     if task == "classification":
         cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=seed)
     else:
@@ -27,10 +29,10 @@ def _eval_seed(model, X, y, task, seed, main_metric_name, config=None):
         
         if task == "classification":
             probs = m.predict_proba(X_test) if hasattr(m, "predict_proba") else None
-            metrics, _ = evaluate_classification_metrics(y_test, preds, probs, config)
+            metrics, _ = evaluate_classification_metrics(y_test, preds, probs)
             seed_folds.append(metrics[main_metric_name])
         else:
-            metrics = evaluate_regression_metrics(y_test, preds, config)
+            metrics = evaluate_regression_metrics(y_test, preds)
             seed_folds.append(metrics[main_metric_name])
             
     return np.mean(seed_folds)
@@ -39,7 +41,7 @@ def run_stability_analysis(model, X, y, task: str, seeds: list, config: dict = N
     main_metric_name = "Macro F1" if task == "classification" else "MAE"
     
     seed_scores = Parallel(n_jobs=n_jobs)(
-        delayed(_eval_seed)(model, X, y, task, s, main_metric_name, config) for s in seeds
+        delayed(_eval_seed)(model, X, y, task, s, main_metric_name) for s in seeds
     )
         
     return {
@@ -50,3 +52,7 @@ def run_stability_analysis(model, X, y, task: str, seeds: list, config: dict = N
         "min": float(np.min(seed_scores)),
         "max": float(np.max(seed_scores))
     }
+'''
+
+with open('researchbench/evaluation/stability.py', 'w', encoding='utf-8') as f:
+    f.write(content)

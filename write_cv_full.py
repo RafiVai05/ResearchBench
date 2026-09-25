@@ -1,21 +1,23 @@
-from sklearn.model_selection import StratifiedKFold, KFold
+import os
+
+content = '''from sklearn.model_selection import StratifiedKFold, KFold
 from sklearn.base import clone
 import numpy as np
 from joblib import Parallel, delayed
 from .classification import evaluate_classification_metrics
 from .regression import evaluate_regression_metrics
 
-def _eval_fold(model, X_train, X_test, y_train, y_test, task, main_metric_name, config=None):
+def _eval_fold(model, X_train, X_test, y_train, y_test, task, main_metric_name):
     m = clone(model)
     m.fit(X_train, y_train)
     preds = m.predict(X_test)
     
     if task == "classification":
         probs = m.predict_proba(X_test) if hasattr(m, "predict_proba") else None
-        metrics, _ = evaluate_classification_metrics(y_test, preds, probs, config)
+        metrics, _ = evaluate_classification_metrics(y_test, preds, probs)
         return metrics[main_metric_name]
     else:
-        metrics = evaluate_regression_metrics(y_test, preds, config)
+        metrics = evaluate_regression_metrics(y_test, preds)
         return metrics[main_metric_name]
 
 def run_cross_validation(model, X, y, task: str, folds: int = 5, config: dict = None, n_jobs: int = 1):
@@ -37,7 +39,7 @@ def run_cross_validation(model, X, y, task: str, folds: int = 5, config: dict = 
         return X_train, X_test, y_train, y_test
         
     fold_scores = Parallel(n_jobs=n_jobs)(
-        delayed(_eval_fold)(model, *get_split(train_idx, test_idx), task, main_metric_name, config)
+        delayed(_eval_fold)(model, *get_split(train_idx, test_idx), task, main_metric_name)
         for train_idx, test_idx in cv.split(X_arr, y_arr)
     )
             
@@ -72,3 +74,7 @@ def run_cross_validation(model, X, y, task: str, folds: int = 5, config: dict = 
         "ci_lower": ci_lower,
         "ci_upper": ci_upper
     }
+'''
+
+with open('researchbench/evaluation/cross_validation.py', 'w', encoding='utf-8') as f:
+    f.write(content)

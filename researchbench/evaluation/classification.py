@@ -16,7 +16,7 @@ def get_classification_models():
         "knn": KNeighborsClassifier()
     }
 
-def evaluate_classification_metrics(y_true, y_pred, y_prob=None):
+def evaluate_classification_metrics(y_true, y_pred, y_prob=None, config=None):
     classes = np.unique(y_true)
     is_multiclass = len(classes) > 2
     
@@ -42,4 +42,15 @@ def evaluate_classification_metrics(y_true, y_pred, y_prob=None):
         
     cm = confusion_matrix(y_true, y_pred)
     
+
+    if config and "metrics" in config and "custom" in config["metrics"]:
+        from researchbench.evaluation.metrics_loader import load_custom_metric
+        for c_metric in config["metrics"]["custom"]:
+            try:
+                func = load_custom_metric(c_metric["path"], c_metric["function"])
+                name = c_metric.get("name", c_metric["function"])
+                metrics[f"USER-DEFINED METRIC ({name})"] = func(y_true, y_pred)
+            except Exception as e:
+                metrics[f"USER-DEFINED METRIC (Error)"] = str(e)
+                
     return metrics, cm

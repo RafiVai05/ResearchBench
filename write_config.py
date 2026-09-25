@@ -1,7 +1,10 @@
-import yaml
 import os
 
-DEFAULT_CONFIG = {
+with open('researchbench/config.py', 'r', encoding='utf-8') as f:
+    config = f.read()
+
+# I will update DEFAULT_CONFIG
+replacement = '''DEFAULT_CONFIG = {
     'dataset': None,
     'task': None,
     'target': None,
@@ -58,22 +61,10 @@ DEFAULT_CONFIG = {
             'advisor', 'reproducibility'
         ]
     }
-}
+}'''
 
-def deep_merge(target, source):
-    for k, v in source.items():
-        if isinstance(v, dict) and k in target and isinstance(target[k], dict):
-            deep_merge(target[k], v)
-        else:
-            target[k] = v
-    return target
+import re
+config = re.sub(r'DEFAULT_CONFIG = \{.*?\}\n\ndef', replacement + '\\n\\ndef', config, flags=re.DOTALL)
 
-def load_config(path: str = None) -> dict:
-    import copy
-    config = copy.deepcopy(DEFAULT_CONFIG)
-    if path and os.path.exists(path):
-        with open(path, 'r', encoding='utf-8') as f:
-            user_config = yaml.safe_load(f)
-            if user_config:
-                deep_merge(config, user_config)
-    return config
+with open('researchbench/config.py', 'w', encoding='utf-8') as f:
+    f.write(config)

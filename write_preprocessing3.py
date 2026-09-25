@@ -1,4 +1,6 @@
-import numpy as np
+import os
+
+content = '''import numpy as np
 import pandas as pd
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
@@ -114,3 +116,6 @@ def build_model_pipeline(model, X: pd.DataFrame, config: dict = None, preprocess
         ('preprocessor', preprocessor),
         ('model', model)
     ])
+'''
+with open('researchbench/evaluation/preprocessing.py', 'w', encoding='utf-8') as f:
+    f.write(content)
