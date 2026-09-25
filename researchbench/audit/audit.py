@@ -21,7 +21,14 @@ def perform_research_audit(df, target, task, config=None):
     metric_concerns = check_metrics_suitability(task, has_imbalance, has_outliers)
     sample_concerns = check_sample_size(health["profile"]["num_rows"], health["profile"]["num_cols"])
     
+
+    from .schema import audit_data_schema
+    schema_concerns = []
+    if config and "schema" in config:
+        schema_concerns = audit_data_schema(df, config["schema"])
+        
     preproc_concerns = []
+
     if config and "preprocessing" in config:
         pass
     else:
@@ -45,6 +52,7 @@ def perform_research_audit(df, target, task, config=None):
         "health": health,
         "distribution": dist,
         "leakage_concerns": leakage_concerns,
+        "schema_concerns": schema_concerns,
         "imbalance_concerns": imbalance_concerns,
         "metric_concerns": metric_concerns,
         "sample_concerns": sample_concerns,

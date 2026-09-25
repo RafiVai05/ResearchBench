@@ -29,10 +29,10 @@ def mine_hard_examples(y_true, y_pred, y_prob, X, task, top_p=0.05):
         
     n_top = max(1, int(len(errors) * top_p))
     top_indices = np.argsort(errors)[-n_top:][::-1]
-    
     hard_samples = []
     if isinstance(X, pd.DataFrame):
         hard_df = X.iloc[top_indices].copy()
+        hard_df["_Original_Positional_Index"] = top_indices
         hard_df["True_Label"] = y_true[top_indices]
         hard_df["Predicted"] = y_pred[top_indices]
         hard_df["Error_Magnitude"] = errors[top_indices]

@@ -446,6 +446,35 @@ def execute_cli():
                         if true_y is None: true_y = oof_y
                 if true_y is not None:
                     audit_res["agreement"] = evaluate_agreement(preds_dict, true_y, task)
+            # v0.8 Additions
+            # Conformal Prediction Intervals
+            from researchbench.evaluation.conformal import calculate_conformal_bounds
+            if task == "regression" and config.get("conformal", {}).get("enabled", False):
+                for m_name, m_data in model_res.items():
+                    oof_y = m_data.get("cv", {}).get("oof_y")
+                    oof_preds = m_data.get("cv", {}).get("oof_preds")
+                    if oof_y and oof_preds:
+                        model_res[m_name]["conformal"] = calculate_conformal_bounds(oof_y, oof_preds, confidence_level=0.90)
+
+            # Local Explanations for Hard Examples
+            from researchbench.evaluation.explainability import explain_local_prediction
+            if config.get("local_xai", {}).get("enabled", False):
+                processed_models = getattr(evaluate_models, "last_processed", {})
+                for m_name, m_data in model_res.items():
+                    if "hard_examples" in m_data and m_data["hard_examples"]:
+                        oof_idx = m_data.get("cv", {}).get("oof_idx")
+                        if oof_idx:
+                            X_oof = X.iloc[oof_idx] if hasattr(X, "iloc") else X[oof_idx]
+                            hard_exs = m_data["hard_examples"]["hard_examples"][:3]
+                            model_pipe = processed_models.get(m_name)
+                            if model_pipe:
+                                for ex in hard_exs:
+                                    if "_Original_Positional_Index" in ex:
+                                        pos_idx = int(ex["_Original_Positional_Index"])
+                                        x_inst = X_oof.iloc[pos_idx]
+                                        local_expl = explain_local_prediction(model_pipe, x_inst, X_oof, task)
+                                        ex["_Local_Explanation"] = local_expl
+
             # v0.7 Additions
             # Surrogate XAI
             from researchbench.evaluation.explainability import extract_surrogate_rules, find_error_slices

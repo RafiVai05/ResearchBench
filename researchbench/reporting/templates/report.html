@@ -438,6 +438,71 @@
         </table>
     </div>
 
+\n    
+
+    <!-- V0.8 Conformal Prediction Intervals -->
+    {% if audit.reproducibility.task == 'regression' %}
+    <div class="card">
+        <h2>Conformal Prediction Intervals</h2>
+        <p><em>Empirically calibrated error bounds based on CV residuals.</em></p>
+        <table class="metric-table">
+            <tr>
+                <th>Model</th>
+                <th>Confidence Level</th>
+                <th>Expected Error Bound</th>
+            </tr>
+            {% for name, metrics in models.items() %}
+                {% if metrics.conformal %}
+                <tr>
+                    <td>{{ name }}</td>
+                    <td>{{ "%.0f"|format(metrics.conformal.confidence_level * 100) }}%</td>
+                    <td>&plusmn; {{ "%.4f"|format(metrics.conformal.error_bound) }}</td>
+                </tr>
+                {% endif %}
+            {% endfor %}
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- V0.8 Schema Audit -->
+    {% if audit.schema_concerns %}
+    <div class="card" style="border: 1px solid red;">
+        <h2 style="color: red;">CRITICAL: Data Integrity Schema Violations</h2>
+        <ul>
+            {% for concern in audit.schema_concerns %}
+            <li>{{ concern }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- V0.8 Local Explanations (Hard Examples) -->
+    <div class="card">
+        <h2>Local Feature Attribution (Edge Cases)</h2>
+        <p><em>Perturbation-based local explanations for the absolute hardest examples.</em></p>
+        {% for name, metrics in models.items() %}
+            {% if metrics.hard_examples %}
+            <h3>{{ name }} - Worst Edge Cases</h3>
+            <ul>
+                {% for ex in metrics.hard_examples.hard_examples %}
+                    {% if ex._Local_Explanation %}
+                    <li>
+                        <strong>Index:</strong> {{ ex.index|default('N/A') }} 
+                        | <strong>True:</strong> {{ "%.2f"|format(ex.True_Label) }} 
+                        | <strong>Pred:</strong> {{ "%.2f"|format(ex.Predicted) }}
+                        <ul>
+                            {% for feature, weight in ex._Local_Explanation.items() %}
+                            <li>{{ feature }}: {{ "%.4f"|format(weight) }} impact</li>
+                            {% endfor %}
+                        </ul>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+            {% endif %}
+        {% endfor %}
+    </div>
+
 \n    <h2>Reproducibility & Limitations</h2>
     <div class="card">
         <ul>

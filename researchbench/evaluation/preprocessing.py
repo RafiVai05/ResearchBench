@@ -93,7 +93,26 @@ def build_preprocessor(X: pd.DataFrame, config: dict = None) -> ColumnTransforme
         else:
             transformers.append(('num_default', 'passthrough', default_num_cols))
 
+
+    # Auto-detect text columns if not explicitly defined
+    auto_text_cols = []
+    if config.get("auto_nlp", {}).get("enabled", True):
+        for col in cat_cols:
+            if col not in explicit_cols:
+                # heuristic: high cardinality and string length
+                unique_ratio = X[col].nunique() / max(1, len(X))
+                if unique_ratio > 0.5:
+                    sample = X[col].dropna().astype(str)
+                    if len(sample) > 0 and sample.str.len().mean() > 20:
+                        auto_text_cols.append(col)
+                        
+    for c in auto_text_cols:
+        from sklearn.feature_extraction.text import TfidfVectorizer
+        transformers.append((f"auto_text_{c}", TfidfVectorizer(max_features=50), c))
+        explicit_cols.add(c)
+        
     cat_conf = preproc_config.get('categorical', {})
+
     default_cat_cols = [c for c in cat_cols if c not in explicit_cols]
     if default_cat_cols:
         default_cat_conf = cat_conf.get('default', cat_conf) if isinstance(cat_conf, dict) else cat_conf
