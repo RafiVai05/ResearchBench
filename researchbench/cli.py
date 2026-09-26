@@ -551,9 +551,43 @@ def execute_cli():
             from researchbench.reporting.insights import generate_executive_summary
             audit_res["executive_summary"] = generate_executive_summary(audit_res, model_res)
             
+
+            import hashlib
+            hasher = hashlib.sha256()
+            try:
+                with open(config["dataset"], "rb") as f_hash:
+                    for chunk in iter(lambda: f_hash.read(4096), b""):
+                        hasher.update(chunk)
+                dataset_hash = hasher.hexdigest()
+            except Exception:
+                dataset_hash = "Unknown"
+                
+            audit_res.setdefault("reproducibility", {})
+            audit_res["reproducibility"]["dataset_hash"] = dataset_hash
+            
             generate_report(audit_res, model_res, adv_res, out_html, config["dataset"])
 
+
+
             print(f"Report generated at: {out_html}")
+            
+            # Artifact Serialization (v1.0)
+            if model_res:
+                best_model = None
+                best_score = -9999
+                for name, metrics in model_res.items():
+                    cv = metrics.get("cv", {})
+                    if cv and "mean" in cv and cv["mean"] > best_score:
+                        best_score = cv["mean"]
+                        best_model = name
+                processed = getattr(evaluate_models, "last_processed", {})
+                best_pipe = processed.get(best_model)
+                if best_pipe:
+                    import joblib
+                    joblib_path = out_html.replace(".html", "_best_model.joblib")
+                    joblib.dump(best_pipe, joblib_path)
+                    print(f"Serialized best deployable artifact ({best_model}) to: {joblib_path}")
+
             
             if args.save:
                 record = {

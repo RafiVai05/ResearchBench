@@ -79,6 +79,9 @@ def build_preprocessor(X: pd.DataFrame, config: dict = None) -> ColumnTransforme
     default_num_cols = [c for c in num_cols if c not in explicit_cols]
     if default_num_cols:
         default_num_conf = num_conf.get('default', num_conf) if isinstance(num_conf, dict) else num_conf
+        if not default_num_conf:
+            default_num_conf = {'imputation': 'median', 'scaling': 'standard'}
+            
         if isinstance(default_num_conf, dict):
             num_steps = []
             if default_num_conf.get('imputation') in ['median', 'mean']:
@@ -116,6 +119,9 @@ def build_preprocessor(X: pd.DataFrame, config: dict = None) -> ColumnTransforme
     default_cat_cols = [c for c in cat_cols if c not in explicit_cols]
     if default_cat_cols:
         default_cat_conf = cat_conf.get('default', cat_conf) if isinstance(cat_conf, dict) else cat_conf
+        if not default_cat_conf:
+            default_cat_conf = {'imputation': 'most_frequent', 'encoding': 'onehot'}
+            
         if isinstance(default_cat_conf, dict):
             cat_steps = []
             if default_cat_conf.get('imputation') == 'most_frequent':

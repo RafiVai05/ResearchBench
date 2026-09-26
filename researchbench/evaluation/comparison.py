@@ -22,9 +22,21 @@ def evaluate_models(X, y, task: str, model_names: list, config: dict = None, fol
         else:
             raise ValueError(f"Unknown model: {name}")
             
+
     # Add baselines
     for b_name, b_model in baselines.items():
         models_to_run[b_name] = b_model
+        
+    # Automated Ensembling
+    if len(models_to_run) > 1 and config.get("ensembling", {}).get("enabled", True):
+        estimators = [(name, model) for name, model in models_to_run.items()]
+        if task == "classification":
+            from sklearn.ensemble import VotingClassifier
+            models_to_run["ensemble_voting"] = VotingClassifier(estimators=estimators, voting="soft")
+        else:
+            from sklearn.ensemble import VotingRegressor
+            models_to_run["ensemble_voting"] = VotingRegressor(estimators=estimators)
+
     
     processed_models = {}
     for name, model in models_to_run.items():

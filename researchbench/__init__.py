@@ -21,3 +21,5 @@ __all__ = [
     'perform_research_audit',
     'generate_report'
 ]
+
+from .api import ResearchBenchProject
