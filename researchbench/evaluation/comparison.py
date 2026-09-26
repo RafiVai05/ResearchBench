@@ -67,7 +67,36 @@ def evaluate_models(X, y, task: str, model_names: list, config: dict = None, fol
             # Convert non-serializable objects if necessary
             results[name]["best_params"] = {k: str(v) for k, v in pipeline.best_params_.items()}
             
+
+        from sklearn.model_selection import RandomizedSearchCV
+        
+        cv_res = None
+        if config and config.get("optimization", {}).get("enabled", False):
+            opt_conf = config["optimization"]
+            n_trials = opt_conf.get("n_trials", 10)
+            
+            # Simple generic grid based on model string representation
+            param_grid = {}
+            m_str = str(model).lower()
+            if "logisticregression" in m_str:
+                param_grid = {'model__C': [0.01, 0.1, 1.0, 10.0], 'model__penalty': ['l2']}
+            elif "randomforest" in m_str:
+                param_grid = {'model__n_estimators': [50, 100, 200], 'model__max_depth': [None, 5, 10, 20]}
+            elif "decisiontree" in m_str:
+                param_grid = {'model__max_depth': [None, 3, 5, 10]}
+                
+            if param_grid:
+                try:
+                    search = RandomizedSearchCV(pipeline, param_grid, n_iter=n_trials, cv=3, random_state=42, n_jobs=n_jobs)
+                    search.fit(X, y)
+                    pipeline = search.best_estimator_
+                except Exception:
+                    pass
+                    
         cv_res = run_cross_validation(pipeline, X, y, task, folds=folds, config=config, n_jobs=n_jobs)
+
+
+
         results[name]["cv"] = cv_res
         
         evaluate_models.last_processed = processed_models

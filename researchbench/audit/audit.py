@@ -23,9 +23,14 @@ def perform_research_audit(df, target, task, config=None):
     
 
     from .schema import audit_data_schema
+    from .collinearity import check_collinearity
+    
     schema_concerns = []
     if config and "schema" in config:
         schema_concerns = audit_data_schema(df, config["schema"])
+        
+    collinearity_concerns = check_collinearity(df)
+
         
     preproc_concerns = []
 
@@ -52,7 +57,9 @@ def perform_research_audit(df, target, task, config=None):
         "health": health,
         "distribution": dist,
         "leakage_concerns": leakage_concerns,
+
         "schema_concerns": schema_concerns,
+        "collinearity_concerns": collinearity_concerns,
         "imbalance_concerns": imbalance_concerns,
         "metric_concerns": metric_concerns,
         "sample_concerns": sample_concerns,

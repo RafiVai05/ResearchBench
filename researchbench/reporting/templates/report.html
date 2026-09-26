@@ -17,7 +17,15 @@
         .plot img { max-width: 100%; border: 1px solid #eee; }
     </style>
 </head>
-<body>
+<body>\n
+    <!-- V0.9 Executive Summary -->
+    {% if audit.executive_summary %}
+    <div class="card" style="background: #f8f9fa; border-left: 4px solid #0056b3;">
+        <h2 style="color: #0056b3; border-bottom: none;">Executive Insights</h2>
+        <p style="font-size: 1.1em; line-height: 1.8;">{{ audit.executive_summary }}</p>
+    </div>
+    {% endif %}
+
     <h1>ResearchBench Quality Report</h1>
     <p><strong>Dataset:</strong> {{ dataset_name }} | <strong>Target:</strong> {{ audit.reproducibility.target }} | <strong>Task:</strong> {{ audit.reproducibility.task }}</p>
     
@@ -440,7 +448,43 @@
 
 \n    
 
-    <!-- V0.8 Conformal Prediction Intervals -->
+    
+    <!-- V0.9 Algorithmic Fairness Audit -->
+    {% if audit.fairness %}
+    <div class="card">
+        <h2>Algorithmic Fairness & Bias Audit</h2>
+        <p><em>Evaluating model decisions across protected attributes.</em></p>
+        {% for attr, f_data in audit.fairness.items() %}
+            <h3>Protected Attribute: <code>{{ attr }}</code></h3>
+            <p>Privileged Class: {{ f_data.privileged_class }} (Base Rate: {{ "%.2f"|format(f_data.base_rate_privileged) }}) | Unprivileged Base Rate: {{ "%.2f"|format(f_data.base_rate_unprivileged) }}</p>
+            <table class="metric-table">
+                <tr>
+                    <th>Model</th>
+                    <th>Disparate Impact (Ratio)</th>
+                    <th>Equal Opportunity Diff (TPR)</th>
+                </tr>
+                {% for m_name, metrics in f_data.models.items() %}
+                <tr>
+                    <td>{{ m_name }}</td>
+                    <td style="{% if metrics.disparate_impact < 0.8 %}color: red; font-weight: bold;{% endif %}">{{ "%.3f"|format(metrics.disparate_impact) }}</td>
+                    <td style="{% if metrics.equal_opportunity_difference < -0.1 or metrics.equal_opportunity_difference > 0.1 %}color: red; font-weight: bold;{% endif %}">{{ "%.3f"|format(metrics.equal_opportunity_difference) }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- V0.9 Collinearity Audit -->
+    {% if audit.collinearity_concerns %}
+    <div class="card">
+        <h2>Multicollinearity (VIF)</h2>
+        {% for concern in audit.collinearity_concerns %}
+        <div class="concern">{{ concern }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+\n    <!-- V0.8 Conformal Prediction Intervals -->
     {% if audit.reproducibility.task == 'regression' %}
     <div class="card">
         <h2>Conformal Prediction Intervals</h2>

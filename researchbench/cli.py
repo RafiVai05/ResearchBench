@@ -539,7 +539,20 @@ def execute_cli():
                     print(f"  Best Params: {vals['best_params']}")
             
             out_html = "researchbench-report.html"
+
+            # v0.9 Additions
+            # Algorithmic Fairness Audit
+            from researchbench.audit.fairness import audit_fairness
+            oof_preds_dict = {m_name: m_data.get("cv", {}).get("oof_preds") for m_name, m_data in model_res.items() if m_data.get("cv")}
+            fairness_res = audit_fairness(df, config["target"], config, oof_preds_dict)
+            audit_res["fairness"] = fairness_res
+            
+            # Executive Insights Generator
+            from researchbench.reporting.insights import generate_executive_summary
+            audit_res["executive_summary"] = generate_executive_summary(audit_res, model_res)
+            
             generate_report(audit_res, model_res, adv_res, out_html, config["dataset"])
+
             print(f"Report generated at: {out_html}")
             
             if args.save:
