@@ -8,7 +8,7 @@ def generate_learning_curve_plot(estimator, X, y, task, cv_folds=5):
     try:
         scoring = "accuracy" if task == "classification" else "r2"
         train_sizes, train_scores, test_scores = learning_curve(
-            estimator, X, y, cv=cv_folds, n_jobs=-1, 
+            estimator, X, y, cv=cv_folds, n_jobs=1, 
             train_sizes=np.linspace(0.2, 1.0, 5), scoring=scoring
         )
         

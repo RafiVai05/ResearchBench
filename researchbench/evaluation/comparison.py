@@ -41,10 +41,10 @@ def evaluate_models(X, y, task: str, model_names: list, config: dict = None, fol
         estimators = [(name, model) for name, model in models_to_run.items()]
         if task == "classification":
             from sklearn.ensemble import VotingClassifier
-            models_to_run["ensemble_voting"] = VotingClassifier(estimators=estimators, voting="soft")
+            models_to_run["ensemble_voting"] = VotingClassifier(estimators=estimators, voting="soft", n_jobs=1)
         else:
             from sklearn.ensemble import VotingRegressor
-            models_to_run["ensemble_voting"] = VotingRegressor(estimators=estimators)
+            models_to_run["ensemble_voting"] = VotingRegressor(estimators=estimators, n_jobs=1)
 
     
     processed_models = {}
