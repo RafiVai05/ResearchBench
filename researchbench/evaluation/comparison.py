@@ -15,6 +15,7 @@ def evaluate_models(X, y, task: str, model_names: list, config: dict = None, fol
         available = get_regression_models()
         baselines = get_baseline_models(task)
         
+
     models_to_run = {}
     for name in model_names:
         if name in available:
@@ -22,10 +23,18 @@ def evaluate_models(X, y, task: str, model_names: list, config: dict = None, fol
         else:
             raise ValueError(f"Unknown model: {name}")
             
-
     # Add baselines
     for b_name, b_model in baselines.items():
         models_to_run[b_name] = b_model
+        
+    # Auto-balancing
+    if task == "classification":
+        class_counts = pd.Series(y).value_counts(normalize=True)
+        if len(class_counts) > 0 and class_counts.min() < 0.15:
+            for name, model in models_to_run.items():
+                if hasattr(model, "class_weight"):
+                    setattr(model, "class_weight", "balanced")
+
         
     # Automated Ensembling
     if len(models_to_run) > 1 and config.get("ensembling", {}).get("enabled", True):
@@ -109,7 +118,19 @@ def evaluate_models(X, y, task: str, model_names: list, config: dict = None, fol
 
 
 
+
         results[name]["cv"] = cv_res
+        
+        # Learning Curve (v1.0.1)
+        if config.get("diagnostics", {}).get("learning_curve", True):
+            try:
+                from researchbench.evaluation.learning_curve import generate_learning_curve_plot
+                lc_plot = generate_learning_curve_plot(pipeline, X, y, task, cv_folds=folds)
+                if lc_plot:
+                    results[name]["learning_curve"] = lc_plot
+            except Exception:
+                pass
+
         
         evaluate_models.last_processed = processed_models
     return results
