@@ -121,6 +121,7 @@ def evaluate_models(X, y, task: str, model_names: list, config: dict = None, fol
 
         results[name]["cv"] = cv_res
         
+
         # Learning Curve (v1.0.1)
         if config.get("diagnostics", {}).get("learning_curve", True):
             try:
@@ -130,6 +131,16 @@ def evaluate_models(X, y, task: str, model_names: list, config: dict = None, fol
                     results[name]["learning_curve"] = lc_plot
             except Exception:
                 pass
+                
+        # Feature Importance (v1.0.4)
+        try:
+            from researchbench.evaluation.feature_importance import generate_feature_importance_plot
+            fi_plot = generate_feature_importance_plot(pipeline, X.columns.tolist())
+            if fi_plot:
+                results[name]["feature_importance"] = fi_plot
+        except Exception:
+            pass
+
 
         
         evaluate_models.last_processed = processed_models
