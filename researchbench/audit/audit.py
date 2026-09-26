@@ -22,14 +22,21 @@ def perform_research_audit(df, target, task, config=None):
     sample_concerns = check_sample_size(health["profile"]["num_rows"], health["profile"]["num_cols"])
     
 
+
     from .schema import audit_data_schema
     from .collinearity import check_collinearity
+    from .outliers import detect_outliers_isolation_forest
+    from .dimensionality import check_dimensionality_pca
     
     schema_concerns = []
     if config and "schema" in config:
         schema_concerns = audit_data_schema(df, config["schema"])
         
     collinearity_concerns = check_collinearity(df)
+    
+    outlier_concerns, outlier_fraction = detect_outliers_isolation_forest(df, target)
+    dim_concerns, pca_info = check_dimensionality_pca(df, target)
+
 
         
     preproc_concerns = []
@@ -49,14 +56,24 @@ def perform_research_audit(df, target, task, config=None):
     all_concerns.extend(health["concerns"])
     all_concerns.extend(leakage_concerns)
     all_concerns.extend(imbalance_concerns)
+
     all_concerns.extend(metric_concerns)
     all_concerns.extend(sample_concerns)
     all_concerns.extend(preproc_concerns)
+    all_concerns.extend(outlier_concerns)
+    all_concerns.extend(dim_concerns)
+
     
     return {
+
         "health": health,
         "distribution": dist,
         "leakage_concerns": leakage_concerns,
+        "outlier_concerns": outlier_concerns,
+        "outlier_fraction": outlier_fraction,
+        "dimensionality_concerns": dim_concerns,
+        "pca_info": pca_info,
+
 
         "schema_concerns": schema_concerns,
         "collinearity_concerns": collinearity_concerns,
