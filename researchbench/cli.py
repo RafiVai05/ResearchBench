@@ -334,7 +334,20 @@ def execute_cli():
             X = df.drop(columns=[args.target])
             audit_res = perform_research_audit(df, args.target, args.task, config)
             model_res = evaluate_models(X, y, args.task, args.models, config=config, preprocess_mode=args.preprocess)
-            adv_res = run_advisor(audit_res, model_res, args.task)
+
+            adv_res = run_advisor(audit_res, model_res, config.get("task", args.task if hasattr(args, "task") else "classification"))
+            
+            # Model Stability Plot (v1.0.8)
+            try:
+                from researchbench.evaluation.stability_plot import generate_stability_plot
+                stability_plot = generate_stability_plot(model_res)
+                if stability_plot:
+                    if adv_res is None:
+                        adv_res = {}
+                    adv_res["global_stability_plot"] = stability_plot
+            except Exception:
+                pass
+
             
             generate_report(audit_res, model_res, adv_res, args.output, args.dataset)
             print(f"Report generated at: {args.output}")
@@ -374,7 +387,20 @@ def execute_cli():
 
             audit_res = perform_research_audit(df, config["target"], task, config)
             model_res = evaluate_models(X, y, task, models, config=config, preprocess_mode="auto")
-            adv_res = run_advisor(audit_res, model_res, task)
+
+            adv_res = run_advisor(audit_res, model_res, config.get("task", args.task if hasattr(args, "task") else "classification"))
+            
+            # Model Stability Plot (v1.0.8)
+            try:
+                from researchbench.evaluation.stability_plot import generate_stability_plot
+                stability_plot = generate_stability_plot(model_res)
+                if stability_plot:
+                    if adv_res is None:
+                        adv_res = {}
+                    adv_res["global_stability_plot"] = stability_plot
+            except Exception:
+                pass
+
             
             # v0.5 Additions
             # Calibration

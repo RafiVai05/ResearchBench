@@ -51,7 +51,19 @@
         {% endfor %}
     </div>
     
+
+    {% if advisor.global_stability_plot %}
+    <h2>Cross-Validation Stability (All Models)</h2>
+    <div class="card">
+        <p><em>Comparison of score variance across all cross-validation folds.</em></p>
+        <div class="plot">
+            <img src="{{ advisor.global_stability_plot }}" alt="CV Stability Plot" style="max-width: 800px;">
+        </div>
+    </div>
+    {% endif %}
+
     <h2>2. Model Comparison</h2>
+
     <div class="card">
         <table class="metric-table">
             <thead>
@@ -87,6 +99,7 @@
         {% endif %}
     </div>
     
+
     <h2>3. Dataset Health Profile</h2>
     <div class="card">
         <ul>
@@ -100,7 +113,16 @@
             <img src="data:image/png;base64,{{ plots.target_dist }}" alt="Target Distribution">
         </div>
         {% endif %}
+        
+        {% if audit.health.profile.correlation_heatmap %}
+        <h3>Feature Correlation Matrix</h3>
+        <p><em>Highlights collinearity and data leakage directly against the target variable.</em></p>
+        <div class="plot">
+            <img src="{{ audit.health.profile.correlation_heatmap }}" alt="Correlation Heatmap" style="max-width: 600px;">
+        </div>
+        {% endif %}
     </div>
+
 
     
     {% if audit.preproc_concerns %}

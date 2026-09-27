@@ -160,5 +160,7 @@ def evaluate_models(X, y, task: str, model_names: list, config: dict = None, fol
 
 
         
+
         evaluate_models.last_processed = processed_models
+                
     return results

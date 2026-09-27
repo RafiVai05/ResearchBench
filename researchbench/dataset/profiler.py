@@ -35,6 +35,15 @@ def profile_dataset(df: pd.DataFrame, target: str = None) -> dict:
             "counts": counts.to_dict(),
             "percentages": percentages.to_dict()
         }
+        
+    # Feature Correlation Heatmap (v1.0.8)
+    correlation_heatmap = None
+    try:
+        from researchbench.evaluation.correlation_plot import generate_correlation_heatmap
+        correlation_heatmap = generate_correlation_heatmap(df)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
 
     return {
         "num_rows": num_rows,
@@ -47,5 +56,6 @@ def profile_dataset(df: pd.DataFrame, target: str = None) -> dict:
         "constant_cols": constant_cols,
         "id_like_cols": id_like_cols,
         "target_distribution": target_distribution,
+        "correlation_heatmap": correlation_heatmap,
         "target": target
     }
