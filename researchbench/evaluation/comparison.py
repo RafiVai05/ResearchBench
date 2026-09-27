@@ -132,7 +132,24 @@ def evaluate_models(X, y, task: str, model_names: list, config: dict = None, fol
             except Exception:
                 pass
                 
+
+        # Visual Diagnostics (v1.0.7)
+        try:
+            from researchbench.evaluation.performance_plots import generate_confusion_matrix_plot, generate_roc_curve_plot
+            if task == "classification" and cv_res.get("oof_y") is not None and cv_res.get("oof_preds") is not None:
+                cm_plot = generate_confusion_matrix_plot(cv_res["oof_y"], cv_res["oof_preds"])
+                if cm_plot:
+                    results[name]["confusion_matrix"] = cm_plot
+                    
+                if cv_res.get("oof_probs") is not None:
+                    roc_plot = generate_roc_curve_plot(cv_res["oof_y"], cv_res["oof_probs"])
+                    if roc_plot:
+                        results[name]["roc_curve"] = roc_plot
+        except Exception as e:
+            pass
+            
         # Feature Importance (v1.0.4)
+
         try:
             from researchbench.evaluation.feature_importance import generate_feature_importance_plot
             fi_plot = generate_feature_importance_plot(pipeline, X.columns.tolist())
