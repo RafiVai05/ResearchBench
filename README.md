@@ -49,3 +49,4 @@ See \CONTRIBUTING.md\.
 
 ## License
 MIT
+*Note: ResearchBench v1.1.0 is the current stable release, featuring full interactive Plotly reporting and mathematically rigorous conformal prediction.*
