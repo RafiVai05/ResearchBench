@@ -1,26 +1,48 @@
 import numpy as np
 import pandas as pd
+import scipy.sparse as sp
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, PowerTransformer, PolynomialFeatures, OneHotEncoder, FunctionTransformer
-
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
+from sklearn.base import BaseEstimator, TransformerMixin
+import logging
+
+class SparseToDenseTransformer(BaseEstimator, TransformerMixin):
+    def __init__(self, memory_limit_gb=2.0):
+        self.memory_limit_gb = memory_limit_gb
+        
+    def fit(self, X, y=None):
+        return self
+        
+    def transform(self, X):
+        if sp.issparse(X):
+            # Estimate memory
+            estimated_bytes = X.shape[0] * X.shape[1] * 8 # assuming float64
+            estimated_gb = estimated_bytes / (1024 ** 3)
+            if estimated_gb > self.memory_limit_gb:
+                raise MemoryError(
+                    f"Sparse-to-dense conversion refused. Estimated memory requirement: {estimated_gb:.2f} GB. "
+                    f"Configured safety threshold: {self.memory_limit_gb:.2f} GB."
+                )
+            return X.toarray()
+        return X
 
 def get_transformer(name: str):
     name = name.lower()
     if name == 'standard':
-        return StandardScaler()
+        return StandardScaler(with_mean=False) # sparse safe
     elif name == 'minmax':
-        return MinMaxScaler()
+        return MinMaxScaler() # sparse safe
     elif name == 'robust':
-        return RobustScaler()
+        return RobustScaler(with_centering=False) # sparse safe
     elif name == 'power':
         return PowerTransformer()
     elif name == 'polynomial':
         return PolynomialFeatures()
     elif name == 'log1p':
-        return FunctionTransformer(np.log1p, validate=False)
+        return FunctionTransformer(np.log1p, validate=False, accept_sparse=True)
     elif name == 'median':
         return SimpleImputer(strategy='median')
     elif name == 'mean':
@@ -28,7 +50,7 @@ def get_transformer(name: str):
     elif name == 'most_frequent':
         return SimpleImputer(strategy='most_frequent')
     elif name == 'onehot':
-        return OneHotEncoder(handle_unknown='ignore', sparse_output=False)
+        return OneHotEncoder(handle_unknown='ignore', sparse_output=True) # CHANGED
     elif name == 'tfidf':
         return TfidfVectorizer()
     elif name == 'count':
@@ -96,7 +118,6 @@ def build_preprocessor(X: pd.DataFrame, config: dict = None) -> ColumnTransforme
         else:
             transformers.append(('num_default', 'passthrough', default_num_cols))
 
-
     # Auto-detect text columns if not explicitly defined
     auto_text_cols = []
     if config.get("auto_nlp", {}).get("enabled", True):
@@ -110,7 +131,6 @@ def build_preprocessor(X: pd.DataFrame, config: dict = None) -> ColumnTransforme
                         auto_text_cols.append(col)
                         
     for c in auto_text_cols:
-        from sklearn.feature_extraction.text import TfidfVectorizer
         transformers.append((f"auto_text_{c}", TfidfVectorizer(max_features=50), c))
         explicit_cols.add(c)
         
@@ -139,8 +159,8 @@ def build_preprocessor(X: pd.DataFrame, config: dict = None) -> ColumnTransforme
     if not transformers:
         return None
         
-    return ColumnTransformer(transformers, remainder='drop')
-
+    # ALWAYS preserve sparse matrices through ColumnTransformer if possible
+    return ColumnTransformer(transformers, remainder='drop', sparse_threshold=1.0)
 
 def build_model_pipeline(model, X: pd.DataFrame, config: dict = None, preprocess: str = "auto") -> Pipeline:
     if preprocess == "none":
@@ -152,7 +172,7 @@ def build_model_pipeline(model, X: pd.DataFrame, config: dict = None, preprocess
     else:
         steps = [('preprocessor', preprocessor)]
         
-    # Feature Selection (v1.0.9)
+    # Feature Selection (v1.1.0)
     if config and config.get("feature_selection", {}).get("enabled", False):
         from researchbench.evaluation.feature_selection import ResearchBenchFeatureSelector
         fs_conf = config.get("feature_selection", {})
@@ -160,7 +180,16 @@ def build_model_pipeline(model, X: pd.DataFrame, config: dict = None, preprocess
         task = config.get("task", "classification")
         steps.append(('feature_selection', ResearchBenchFeatureSelector(task=task, k=k)))
         
+    # Check if model supports sparse. If not, densify safely
+    # Most tree models support sparse (RF, DT, XGBoost, LightGBM, CatBoost)
+    # Linear models support sparse (LogisticRegression, Ridge, Lasso)
+    # We will assume modern estimators support sparse unless proven otherwise.
+    # We can add SparseToDenseTransformer for specific models if needed.
+    model_str = str(model).lower()
+    needs_dense = any(x in model_str for x in ['gaussiannb', 'kneighbors'])
+    if needs_dense:
+        steps.append(('to_dense', SparseToDenseTransformer(memory_limit_gb=2.0)))
+        
     steps.append(('model', model))
     
     return Pipeline(steps)
-

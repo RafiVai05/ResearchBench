@@ -1,61 +1,37 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import io
-import base64
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, roc_curve, auc
+import json
+import plotly.express as px
+import plotly.graph_objects as go
+from sklearn.metrics import confusion_matrix, roc_curve, auc
 
 def generate_confusion_matrix_plot(y_true, y_pred):
+    """
+    Generates a Plotly confusion matrix in JSON format.
+    """
     try:
         cm = confusion_matrix(y_true, y_pred)
-        fig, ax = plt.subplots(figsize=(5, 4))
-        disp = ConfusionMatrixDisplay(confusion_matrix=cm)
-        disp.plot(cmap='Blues', ax=ax, colorbar=False)
-        plt.title("Confusion Matrix (OOF)")
-        plt.tight_layout()
-        
-        buf = io.BytesIO()
-        plt.savefig(buf, format='png', dpi=100)
-        plt.close(fig)
-        buf.seek(0)
-        encoded = base64.b64encode(buf.read()).decode('utf-8')
-        return f"data:image/png;base64,{encoded}"
-    except Exception as e:
+        fig = px.imshow(cm, text_auto=True, color_continuous_scale='Blues',
+                        labels=dict(x="Predicted Label", y="True Label", color="Count"))
+        fig.update_layout(title="Confusion Matrix", width=600, height=500)
+        return json.dumps(fig.to_plotly_json())
+    except Exception:
         return None
 
-def generate_roc_curve_plot(y_true, y_probs):
+def generate_roc_curve_plot(y_true, y_prob):
+    """
+    Generates a Plotly ROC curve in JSON format.
+    """
     try:
-        # Check if binary classification
-        unique_classes = np.unique(y_true)
-        if len(unique_classes) != 2:
-            return None
+        if len(y_prob.shape) > 1 and y_prob.shape[1] == 2:
+            y_prob = y_prob[:, 1]
             
-        # Ensure y_probs is 1D (probability of positive class)
-        y_probs = np.array(y_probs)
-        if y_probs.ndim > 1:
-            if y_probs.shape[1] == 2:
-                y_probs = y_probs[:, 1]
-            else:
-                return None
-                
-        fpr, tpr, _ = roc_curve(y_true, y_probs)
+        fpr, tpr, _ = roc_curve(y_true, y_prob)
         roc_auc = auc(fpr, tpr)
         
-        fig, ax = plt.subplots(figsize=(5, 4))
-        ax.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (area = {roc_auc:.2f})')
-        ax.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
-        ax.set_xlim([0.0, 1.0])
-        ax.set_ylim([0.0, 1.05])
-        ax.set_xlabel('False Positive Rate')
-        ax.set_ylabel('True Positive Rate')
-        ax.set_title('Receiver Operating Characteristic (OOF)')
-        ax.legend(loc="lower right")
-        plt.tight_layout()
-        
-        buf = io.BytesIO()
-        plt.savefig(buf, format='png', dpi=100)
-        plt.close(fig)
-        buf.seek(0)
-        encoded = base64.b64encode(buf.read()).decode('utf-8')
-        return f"data:image/png;base64,{encoded}"
-    except Exception as e:
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=fpr, y=tpr, mode='lines', name=f'ROC curve (area = {roc_auc:.2f})'))
+        fig.add_trace(go.Scatter(x=[0, 1], y=[0, 1], mode='lines', name='Random Chance', line=dict(dash='dash')))
+        fig.update_layout(title="Receiver Operating Characteristic", xaxis_title="False Positive Rate", yaxis_title="True Positive Rate", width=600, height=500)
+        return json.dumps(fig.to_plotly_json())
+    except Exception:
         return None

@@ -1,15 +1,36 @@
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression, Ridge
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 import numpy as np
 
 def get_regression_models():
-    return {
+    models = {
         "linear_regression": LinearRegression(),
+        "ridge": Ridge(random_state=42),
         "decision_tree": DecisionTreeRegressor(random_state=42),
-        "random_forest": RandomForestRegressor(random_state=42)
+        "random_forest": RandomForestRegressor(n_estimators=100, random_state=42)
     }
+    
+    try:
+        from xgboost import XGBRegressor
+        models["xgboost"] = XGBRegressor(random_state=42)
+    except ImportError:
+        pass
+        
+    try:
+        from lightgbm import LGBMRegressor
+        models["lightgbm"] = LGBMRegressor(random_state=42)
+    except ImportError:
+        pass
+        
+    try:
+        from catboost import CatBoostRegressor
+        models["catboost"] = CatBoostRegressor(random_state=42, verbose=0)
+    except ImportError:
+        pass
+        
+    return models
 
 def evaluate_regression_metrics(y_true, y_pred, config=None):
     return {

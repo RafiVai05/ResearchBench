@@ -23,7 +23,7 @@
         .tabcontent { display: none; padding: 20px; border: 1px solid #ccc; border-top: none; animation: fadeEffect 1s; background: #fafafa;}
         @keyframes fadeEffect { from {opacity: 0;} to {opacity: 1;} }
 </style>
-</head>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>\n</head>
 <body>\n
     <!-- V0.9 Executive Summary -->
     {% if audit.executive_summary %}
@@ -75,7 +75,11 @@
     <div class="card">
         <p><em>Comparison of score variance across all cross-validation folds.</em></p>
         <div class="plot">
-            <img src="{{ advisor.global_stability_plot }}" alt="CV Stability Plot" style="max-width: 800px;">
+            <div id="plot_3852459174376634659" class="plotly-graph"></div>
+    <script>
+      var figure = {{ advisor.global_stability_plot | safe }};
+      Plotly.newPlot("plot_3852459174376634659", figure.data, figure.layout);
+    </script>
         </div>
     </div>
     {% endif %}
@@ -136,7 +140,11 @@
         <h3>Feature Correlation Matrix</h3>
         <p><em>Highlights collinearity and data leakage directly against the target variable.</em></p>
         <div class="plot">
-            <img src="{{ audit.health.profile.correlation_heatmap }}" alt="Correlation Heatmap" style="max-width: 600px;">
+            <div id="plot_838877643894328884" class="plotly-graph"></div>
+    <script>
+      var figure = {{ audit.health.profile.correlation_heatmap | safe }};
+      Plotly.newPlot("plot_838877643894328884", figure.data, figure.layout);
+    </script>
         </div>
         {% endif %}
     </div>
@@ -248,46 +256,38 @@
     </div>
     {% endif %}
 
+    
     {% if audit.artifact_audit %}
     <div class="card">
-        <h2>Research Artifact Audit</h2>
+        <h2>Research Artifact Audit (v1.1.0)</h2>
+        <p><em>Status: {{ audit.artifact_audit.status }}</em></p>
         
         <h3>Artifact Inventory</h3>
         <ul>
-            <li>Figures found: {{ audit.artifact_audit.inventory.figures_found }}</li>
-            <li>Tables found: {{ audit.artifact_audit.inventory.tables_found }}</li>
             <li>Methodology PDF: {{ "Found" if audit.artifact_audit.inventory.methodology_found else "Not found" }}</li>
             <li>Results PDF: {{ "Found" if audit.artifact_audit.inventory.results_found else "Not found" }}</li>
         </ul>
         
-        {% if audit.artifact_audit.figure_checks %}
-        <h3>Figure Quality Checks</h3>
+        {% if audit.artifact_audit.semantic_claims %}
+        <h3>Extracted Semantic Claims</h3>
         <ul>
-            {% for chk in audit.artifact_audit.figure_checks %}
-            <li><strong>[{{ chk.severity|default('INFO') }}]</strong> {{ chk.figure|default('System') }}: {{ chk.issue|default(chk.warning) }}</li>
-            {% endfor %}
-        </ul>
-        {% endif %}
-        
-        {% if audit.artifact_audit.table_checks %}
-        <h3>Table Validation</h3>
-        <ul>
-            {% for chk in audit.artifact_audit.table_checks %}
-            <li><strong>[{{ chk.severity }}]</strong> {{ chk.table }}: {{ chk.issue }}</li>
+            {% for claim in audit.artifact_audit.semantic_claims %}
+            <li><strong>{{ claim.claim_type }}</strong>: {{ claim }}</li>
             {% endfor %}
         </ul>
         {% endif %}
         
         {% if audit.artifact_audit.consistency %}
-        <h3>Methodology / Results Consistency</h3>
+        <h3>Consistency Engine Findings</h3>
         <ul>
             {% for chk in audit.artifact_audit.consistency %}
-            <li><strong>[{{ chk.severity|default('INFO') }}]</strong> {{ chk.document|default('System') }}: {{ chk.issue|default(chk.warning) }}</li>
+            <li><strong>[{{ chk.severity }}]</strong> {{ chk.issue }}</li>
             {% endfor %}
         </ul>
         {% endif %}
     </div>
     {% endif %}
+
 
     
 

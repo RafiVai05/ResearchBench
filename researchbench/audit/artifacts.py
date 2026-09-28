@@ -1,125 +1,108 @@
 import os
 import glob
-import re
+import json
 import logging
-import pandas as pd
+import urllib.request
+import urllib.parse
+from urllib.error import URLError
+
+def _call_ollama(prompt, model="llama2"):
+    """
+    Calls local Ollama API to extract structured claims.
+    """
+    try:
+        url = "http://localhost:11434/api/generate"
+        data = {
+            "model": model,
+            "prompt": prompt,
+            "stream": False,
+            "format": "json"
+        }
+        req = urllib.request.Request(url, data=json.dumps(data).encode('utf-8'), headers={'Content-Type': 'application/json'})
+        with urllib.request.urlopen(req, timeout=10) as response:
+            res = json.loads(response.read().decode('utf-8'))
+            return res.get("response", "{}")
+    except Exception as e:
+        return None
 
 def audit_artifacts(project_dir, history_data=None):
     report = {
+        "status": "deterministic_fallback",
         "inventory": [],
-        "figure_checks": [],
-        "table_checks": [],
+        "semantic_claims": [],
         "consistency": []
     }
     
-    # 1. Inventory
-    figures = glob.glob(os.path.join(project_dir, "figures", "*.*"))
-    tables = glob.glob(os.path.join(project_dir, "tables", "*.*"))
     methodology = os.path.join(project_dir, "methodology.pdf")
     results_pdf = os.path.join(project_dir, "results.pdf")
     
     report["inventory"] = {
-        "figures_found": len(figures),
-        "tables_found": len(tables),
         "methodology_found": os.path.exists(methodology),
         "results_found": os.path.exists(results_pdf)
     }
     
-    # Extract latest run data for consistency checks
     latest = history_data[-1] if history_data else {}
-    models_info = latest.get("models", {})
+    config = latest.get("config", {})
+    cv_folds = config.get("evaluation", {}).get("cv", {}).get("folds", 5)
     
-    # 2. Figure Checks
     try:
-        import cv2
-        import pytesseract
-        HAS_VISION = True
-    except ImportError:
-        HAS_VISION = False
-        report["figure_checks"].append({"warning": "opencv-python and pytesseract not installed. Install researchbench[artifacts] for automated figure text inspection."})
-        
-    if HAS_VISION:
-        for fig in figures:
-            if not fig.lower().endswith(('.png', '.jpg', '.jpeg')): continue
-            try:
-                img = cv2.imread(fig)
-                if img is None: continue
-                gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-                text = pytesseract.image_to_string(gray).lower()
-                
-                # Basic checks
-                if "x" not in text and "y" not in text and "0." not in text:
-                    report["figure_checks"].append({
-                        "figure": os.path.basename(fig),
-                        "severity": "WARNING",
-                        "issue": "Possible missing axis labels or unreadable text detected via OCR."
-                    })
-                
-                # Compare against metric names
-                if models_info:
-                    for m_name, m_data in models_info.items():
-                        metric_name = m_data.get("cv", {}).get("metric", "").lower()
-                        if metric_name and metric_name in text:
-                            report["figure_checks"].append({
-                                "figure": os.path.basename(fig),
-                                "severity": "INFO",
-                                "issue": f"Detected reference to metric '{metric_name}' in figure text."
-                            })
-            except Exception as e:
-                pass
-                
-    # 3. Table checks
-    for tab in tables:
-        if tab.endswith(".csv"):
-            try:
-                df = pd.read_csv(tab)
-                # Check for metric consistency
-                if models_info:
-                    for col in df.columns:
-                        for m_name, m_data in models_info.items():
-                            mean_val = m_data.get("cv", {}).get("mean")
-                            if mean_val is not None:
-                                # See if any cell is close to mean_val
-                                for val in df[col]:
-                                    try:
-                                        if abs(float(val) - float(mean_val)) < 0.001:
-                                            report["table_checks"].append({
-                                                "table": os.path.basename(tab),
-                                                "severity": "INFO",
-                                                "issue": f"Verified value {val} matches ResearchBench {m_name} CV mean."
-                                            })
-                                    except:
-                                        pass
-            except:
-                pass
-                
-    # 4. Methodology / Results consistency
-    try:
-        import fitz # PyMuPDF
+        import fitz
         HAS_PDF = True
     except ImportError:
         HAS_PDF = False
-        report["consistency"].append({"warning": "PyMuPDF (fitz) not installed. Cannot parse PDF text for consistency."})
         
-    if HAS_PDF:
-        for pdf_file in [methodology, results_pdf]:
-            if os.path.exists(pdf_file):
-                try:
-                    doc = fitz.open(pdf_file)
-                    text = ""
-                    for page in doc:
-                        text += page.get_text().lower() + "\n"
-                        
-                    # Check folds
-                    if latest:
-                        folds = latest.get("config", {}).get("evaluation", {}).get("cv", {}).get("folds", 5)
-                        if f"{folds}-fold" not in text and f"{folds} fold" not in text:
-                            report["consistency"].append({
-                                "document": os.path.basename(pdf_file),
-                                "severity": "WARNING",
-                                "issue": f"Methodology describes a CV strategy, but {folds}-fold (used in experiment) was not clearly detected."
-                            })
-                except:
-                    pass
-                    
+    extracted_text = ""
+    if HAS_PDF and os.path.exists(methodology):
+        try:
+            doc = fitz.open(methodology)
+            for page in doc:
+                extracted_text += page.get_text() + "\n"
+        except Exception:
+            pass
+
+    if extracted_text:
+        # Attempt LLM Structured Extraction
+        prompt = f'''Extract validation strategy claims from the following text. 
+Return ONLY a JSON object with this exact schema:
+{{"claim_type": "cross_validation", "folds": <int>, "stratified": <bool>}}
+Text: {extracted_text[:2000]}
+'''
+        llm_res = _call_ollama(prompt)
+        if llm_res:
+            try:
+                claim = json.loads(llm_res)
+                report["status"] = "semantic_verified"
+                report["semantic_claims"].append(claim)
+                
+                # Consistency check
+                if claim.get("folds") != cv_folds:
+                    report["consistency"].append({
+                        "severity": "POSSIBLE_DISCREPANCY",
+                        "issue": f"Methodology claims {claim.get('folds')}-fold CV, but {cv_folds}-fold was used in configuration."
+                    })
+                else:
+                    report["consistency"].append({
+                        "severity": "VERIFIED",
+                        "issue": f"Methodology claims {claim.get('folds')}-fold CV, matching configuration."
+                    })
+            except Exception:
+                pass
+                
+        # Deterministic Fallback if LLM failed or not available
+        if report["status"] == "deterministic_fallback":
+            report["consistency"].append({
+                "severity": "INFO",
+                "issue": "Semantic verification unavailable (no local LLM). Performing deterministic artifact checks."
+            })
+            if f"{cv_folds}-fold" in extracted_text.lower():
+                report["consistency"].append({
+                    "severity": "INFO",
+                    "issue": f"Direct textual evidence found: '{cv_folds}-fold' appears in methodology text. (Note: Not semantically verified)."
+                })
+            else:
+                report["consistency"].append({
+                    "severity": "INSUFFICIENT_EVIDENCE",
+                    "issue": f"Unable to verify: '{cv_folds}-fold' not found via direct string matching."
+                })
+                
     return report

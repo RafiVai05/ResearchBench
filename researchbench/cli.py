@@ -403,14 +403,16 @@ def execute_cli():
 
             
             # v0.5 Additions
-            # Calibration
-            from researchbench.evaluation.calibration import calculate_calibration
+            
+            # Calibration (v1.1.0)
+            from researchbench.evaluation.calibration import calculate_probability_calibration
             if config.get("calibration", {}).get("enabled", False) and task == "classification":
-                for m_name, m_data in model_res.items():
-                    oof_y = m_data.get("cv", {}).get("oof_y")
-                    oof_probs = m_data.get("cv", {}).get("oof_probs")
-                    if oof_y and oof_probs:
-                        m_data["calibration"] = calculate_calibration(oof_y, oof_probs, n_bins=config["calibration"].get("bins", 10))
+                processed_models = getattr(evaluate_models, "last_processed", {})
+                for m_name, model_pipe in processed_models.items():
+                    res = calculate_probability_calibration(model_pipe, X, y)
+                    if res:
+                        model_res[m_name]["calibration"] = res
+
             
             # Sensitivity
             from researchbench.evaluation.sensitivity import run_sensitivity_analysis
@@ -473,14 +475,16 @@ def execute_cli():
                 if true_y is not None:
                     audit_res["agreement"] = evaluate_agreement(preds_dict, true_y, task)
             # v0.8 Additions
-            # Conformal Prediction Intervals
+            
+            # Conformal Prediction Intervals (v1.1.0)
             from researchbench.evaluation.conformal import calculate_conformal_bounds
             if task == "regression" and config.get("conformal", {}).get("enabled", False):
-                for m_name, m_data in model_res.items():
-                    oof_y = m_data.get("cv", {}).get("oof_y")
-                    oof_preds = m_data.get("cv", {}).get("oof_preds")
-                    if oof_y and oof_preds:
-                        model_res[m_name]["conformal"] = calculate_conformal_bounds(oof_y, oof_preds, confidence_level=0.90)
+                processed_models = getattr(evaluate_models, "last_processed", {})
+                for m_name, model_pipe in processed_models.items():
+                    res = calculate_conformal_bounds(model_pipe, X, y, confidence_level=0.90)
+                    if res:
+                        model_res[m_name]["conformal"] = res
+
 
             # Local Explanations for Hard Examples
             from researchbench.evaluation.explainability import explain_local_prediction
