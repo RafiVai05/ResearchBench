@@ -141,15 +141,26 @@ def build_preprocessor(X: pd.DataFrame, config: dict = None) -> ColumnTransforme
         
     return ColumnTransformer(transformers, remainder='drop')
 
+
 def build_model_pipeline(model, X: pd.DataFrame, config: dict = None, preprocess: str = "auto") -> Pipeline:
     if preprocess == "none":
         return model
         
     preprocessor = build_preprocessor(X, config)
     if preprocessor is None:
-        return model
+        steps = []
+    else:
+        steps = [('preprocessor', preprocessor)]
         
-    return Pipeline([
-        ('preprocessor', preprocessor),
-        ('model', model)
-    ])
+    # Feature Selection (v1.0.9)
+    if config and config.get("feature_selection", {}).get("enabled", False):
+        from researchbench.evaluation.feature_selection import ResearchBenchFeatureSelector
+        fs_conf = config.get("feature_selection", {})
+        k = fs_conf.get("k", 10)
+        task = config.get("task", "classification")
+        steps.append(('feature_selection', ResearchBenchFeatureSelector(task=task, k=k)))
+        
+    steps.append(('model', model))
+    
+    return Pipeline(steps)
+
