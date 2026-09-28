@@ -1,3 +1,4 @@
+import sys
 import os
 import subprocess
 import json
@@ -42,7 +43,7 @@ def test_v110_end_to_end():
     with open("test_conf_v110.json", "w") as out:
         json.dump(config, out)
         
-    res = subprocess.run(["python", "-m", "researchbench.cli", "run", "--config", "test_conf_v110.json"], capture_output=True, text=True)
+    res = subprocess.run([sys.executable, "-m", "researchbench.cli", "run", "--config", "test_conf_v110.json"], capture_output=True, text=True)
     assert res.returncode == 0
     
     with open("researchbench-report.html", "r", encoding="utf-8") as f:
