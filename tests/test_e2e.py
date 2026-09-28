@@ -44,6 +44,9 @@ def test_v110_end_to_end():
         json.dump(config, out)
         
     res = subprocess.run([sys.executable, "-m", "researchbench.cli", "run", "--config", "test_conf_v110.json"], capture_output=True, text=True)
+    if res.returncode != 0:
+        print(res.stderr)
+        print(res.stdout)
     assert res.returncode == 0
     
     with open("researchbench-report.html", "r", encoding="utf-8") as f:
